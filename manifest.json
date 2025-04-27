@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "新北再生家具 - 年度統計",
+  "version": "1.0",
+  "description": "統計再生家具網站每月/每年資料筆數，支援資料匯出與 JSON 匯入",
+  "icons": {
+    "128": "icon.png"
+  },
+  "host_permissions": [
+    "https://recycledstuff.ntpc.gov.tw/BidMgr/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://recycledstuff.ntpc.gov.tw/BidMgr/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://recycledstuff.ntpc.gov.tw/*"]
+    }
+  ]
+}
