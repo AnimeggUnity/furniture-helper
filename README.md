@@ -56,9 +56,6 @@ This is a Chrome extension that provides statistics for monthly and annual data 
 ## 安裝方式 | Installation
 
 1. 下載此專案
-   ```bash
-   git clone [repository-url]
-   ```
 
 2. 開啟 Chrome 瀏覽器
    - 進入擴充功能頁面 (chrome://extensions/)
@@ -107,14 +104,6 @@ MIT License
 - 請確保您的瀏覽器已更新至最新版本
 - 使用時請遵守相關網站的使用條款
 - 建議定期備份匯出的資料
-
-## 聯絡方式 | Contact
-
-如有任何問題或建議，歡迎透過以下方式聯絡：
-
-- 開立 GitHub Issue
-- 發送 Pull Request
-- 聯絡開發團隊
 
 ---
 
