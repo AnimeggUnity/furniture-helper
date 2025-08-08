@@ -1,0 +1,28 @@
+{
+  "CategoryID": 13,
+  "Name": "實木餐桌",
+  "Description": "一、經新店區清潔隊回收後，些許整理後之堪用傢具及裝飾品非新品，無保固卡、非新品，如照片。\n二、網站拍賣，得標領取後一概不退貨換貨，欲參加競標拍賣者請自行斟酌需求再下標。\n三、預約取貨時間：星期一二四五六；13:30~16:30；電話:(02)2214-2829，敬請取貨前一天事先約定時間，(避免承辦人不在)。\n四、取貨地點：薏仁坑路自強巷2-3號 （https://goo.gl/maps/dkpErErsL74yd4vG7），新店清潔隊資源回收組門口藍色倉庫，請(依約定時間取貨)，(不接受臨時領貨)，一律自行取貨，無提供寄送服務。",
+  "InitPrice": "1000",
+  "OriginPrice": "1000",
+  "MinAddPrice": 10,
+  "StartDate": "2024-01-15T00:00:00.00",
+  "EndDate": "2024-01-15T00:00:00.00",
+  "DistID": "231",
+  "DeliveryAddress": "薏仁坑路自強巷2-3號",
+  "Length": "0",
+  "Width": "0",
+  "Height": "0",
+  "Photos": [
+    {
+      "Photo": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A",
+      "PhotoID": "img_001"
+    }
+  ],
+  "PackageInfo": {
+    "CreatedAt": "2024-01-01T12:00:00.000Z",
+    "Source": "LINE_BOT",
+    "Version": "1.0",
+    "TotalImages": 1,
+    "Description": "此格式專為新北市再生家具系統 API 設計，可直接用於一鍵匯入功能"
+  }
+} 
