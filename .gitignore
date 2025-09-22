@@ -1,5 +1,6 @@
 # 開發和備份檔案
 archives/
+docs/
 *.zip
 *backup*
 *temp*
@@ -8,8 +9,8 @@ archives/
 commit_message.txt
 *.tmp
 
-# Claude 本地設定檔
-.claude/settings.local.json
+# Claude 相關檔案
+.claude/
 
 # 系統檔案
 .DS_Store
