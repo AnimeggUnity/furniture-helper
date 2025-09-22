@@ -1,0 +1,27 @@
+# 開發和備份檔案
+archives/
+*.zip
+*backup*
+*temp*
+
+# 暫存檔案
+commit_message.txt
+*.tmp
+
+# Claude 本地設定檔
+.claude/settings.local.json
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+
+# IDE 設定檔
+.vscode/
+.idea/
+
+# 日誌檔案
+*.log
+
+# 編譯輸出
+dist/
+build/

@@ -1,1 +1,0 @@
-chore: Clean up temporary commit message file
