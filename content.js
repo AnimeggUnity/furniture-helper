@@ -285,27 +285,70 @@
         <span style="${COMMON_STYLES.closeButton}"
               onclick="this.parentNode.style.display='none'">X</span>
         <h3 style="font-size:24px; margin-top:0; text-align:center; color:#333;">📊 統計資料總覽</h3>
+        <div style="text-align: center; margin-bottom: 20px; padding: 0 20px;">
+          <label style="margin-right: 20px; font-size: 14px; color: #333;">
+            <input type="radio" name="stats-mode" value="detailed" checked style="margin-right: 5px;">
+            詳細樹狀
+          </label>
+          <label style="font-size: 14px; color: #333;">
+            <input type="radio" name="stats-mode" value="quarterly" style="margin-right: 5px;">
+            季報摘要
+          </label>
+        </div>
         <div style="max-height: 70vh; overflow-y: auto; padding: 10px;">
           <div id="hierarchical-stats-container"></div>
         </div>
       `;
       document.body.appendChild(modal);
+    } else {
+      // Modal 已存在，重置單選按鈕狀態為預設值
+      const detailedRadio = modal.querySelector('input[value="detailed"]');
+      const quarterlyRadio = modal.querySelector('input[value="quarterly"]');
+      if (detailedRadio) detailedRadio.checked = true;
+      if (quarterlyRadio) quarterlyRadio.checked = false;
     }
 
     const container = modal.querySelector('#hierarchical-stats-container');
-    container.innerHTML = '';
 
-    // 建立建立日期統計樹
-    if (hierarchicalStats.createDate) {
-      const createDateSection = createStatsTree(hierarchicalStats.createDate, '📅 建立時間分布 (CreateDate)', '#007baf');
-      container.appendChild(createDateSection);
+    // 渲染統計內容的函數
+    function renderStatsContent(mode) {
+      container.innerHTML = '';
+
+      if (mode === 'quarterly') {
+        // 季報摘要模式
+        if (hierarchicalStats.createDate) {
+          const createDateSection = generateQuarterlyView(hierarchicalStats.createDate, '📅 建立時間分布', '#007baf');
+          container.appendChild(createDateSection);
+        }
+
+        if (hierarchicalStats.endDate) {
+          const endDateSection = generateQuarterlyView(hierarchicalStats.endDate, '🎯 競標結束時間分布', '#ff6b35');
+          container.appendChild(endDateSection);
+        }
+      } else {
+        // 詳細樹狀模式 (原有功能)
+        if (hierarchicalStats.createDate) {
+          const createDateSection = createStatsTree(hierarchicalStats.createDate, '📅 建立時間分布 (CreateDate)', '#007baf');
+          container.appendChild(createDateSection);
+        }
+
+        if (hierarchicalStats.endDate) {
+          const endDateSection = createStatsTree(hierarchicalStats.endDate, '🎯 競標結束時間分布 (EndDate)', '#ff6b35');
+          container.appendChild(endDateSection);
+        }
+      }
     }
 
-    // 建立結束日期統計樹
-    if (hierarchicalStats.endDate) {
-      const endDateSection = createStatsTree(hierarchicalStats.endDate, '🎯 競標結束時間分布 (EndDate)', '#ff6b35');
-      container.appendChild(endDateSection);
-    }
+    // 綁定模式切換事件
+    const modeRadios = modal.querySelectorAll('input[name="stats-mode"]');
+    modeRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        renderStatsContent(e.target.value);
+      });
+    });
+
+    // 初始渲染 (總是從詳細樹狀模式開始)
+    renderStatsContent('detailed');
 
     modal.style.display = 'block';
   }
@@ -518,6 +561,91 @@
       yearDiv.appendChild(yearHeader);
       yearDiv.appendChild(yearContent);
       content.appendChild(yearDiv);
+    });
+
+    section.appendChild(header);
+    section.appendChild(content);
+    return section;
+  }
+
+  // 生成季報摘要視圖
+  function generateQuarterlyView(dateData, title, color) {
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f9fa;';
+
+    const header = document.createElement('div');
+    header.style.cssText = `background: ${color}; color: white; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 7px 7px 0 0;`;
+    header.textContent = title;
+
+    const content = document.createElement('div');
+    content.style.cssText = 'padding: 20px;';
+
+    // 按年份排序（新的在前）
+    const sortedYears = Object.keys(dateData).sort((a, b) => b - a);
+
+    sortedYears.forEach(year => {
+      const yearData = dateData[year];
+
+      // 建立年份標題
+      const yearHeader = document.createElement('div');
+      yearHeader.style.cssText = 'font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; margin-top: 20px;';
+      yearHeader.textContent = `${year}年`;
+      if (year === sortedYears[0]) yearHeader.style.marginTop = '0';
+
+      // 計算年度總計
+      let yearTotal = 0;
+      Object.keys(yearData).forEach(month => {
+        Object.keys(yearData[month]).forEach(day => {
+          yearTotal += yearData[month][day].length;
+        });
+      });
+
+      const yearTotalSpan = document.createElement('span');
+      yearTotalSpan.style.cssText = 'font-size: 14px; color: #666; font-weight: normal; margin-left: 10px;';
+      yearTotalSpan.textContent = `(總計: ${yearTotal}筆)`;
+      yearHeader.appendChild(yearTotalSpan);
+
+      // 建立月份資料網格
+      const monthGrid = document.createElement('div');
+      monthGrid.style.cssText = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;';
+
+      // 按月份排序 (01-12)
+      const sortedMonths = Object.keys(yearData).sort((a, b) => a.localeCompare(b));
+
+      sortedMonths.forEach(month => {
+        const monthData = yearData[month];
+
+        // 計算月份總計
+        let monthTotal = 0;
+        Object.keys(monthData).forEach(day => {
+          monthTotal += monthData[day].length;
+        });
+
+        const monthBox = document.createElement('div');
+        monthBox.style.cssText = `
+          background: white;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 12px;
+          text-align: center;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        `;
+
+        const monthLabel = document.createElement('div');
+        monthLabel.style.cssText = 'font-size: 14px; color: #666; margin-bottom: 5px;';
+        monthLabel.textContent = month;
+
+        const monthCount = document.createElement('div');
+        monthCount.style.cssText = `font-size: 20px; font-weight: bold; color: ${color};`;
+        monthCount.textContent = `${monthTotal}筆`;
+
+        monthBox.appendChild(monthLabel);
+        monthBox.appendChild(monthCount);
+        monthGrid.appendChild(monthBox);
+      });
+
+      content.appendChild(yearHeader);
+      content.appendChild(monthGrid);
     });
 
     section.appendChild(header);
@@ -881,6 +1009,7 @@
 
           // 插入載入表單按鈕
           const importButton = document.createElement('button');
+          importButton.type = 'button';
           importButton.id = 'import-json-btn';
           importButton.innerHTML = '📝 載入表單';
           importButton.className = 'el-button el-button--warning el-button--small';
@@ -914,6 +1043,7 @@
     };
 
     const statsBtn = document.createElement('button');
+    statsBtn.type = 'button';
     statsBtn.id = 'tm-stats-btn';
     statsBtn.textContent = '年度統計';
     statsBtn.className = 'el-button el-button--primary el-button--small';
@@ -922,44 +1052,51 @@
       // 防止事件冒泡和預設行為
       e.preventDefault();
       e.stopPropagation();
-      
+
+      // 設定標記：這是統計按鈕主動觸發的查詢
+      window.__statsButtonTriggered = true;
+
       const queryBtn = Array.from(document.querySelectorAll('button.el-button'))
         .find(b => /查\s*詢/.test(b.textContent));
       if (!queryBtn) {
         console.error('查詢按鈕未找到');
         alert('查詢按鈕未找到，請確認頁面已載入');
+        window.__statsButtonTriggered = false;
         return;
       }
-      
+
       // 使用更安全的方式觸發查詢按鈕
       try {
         // 先嘗試直接觸發 Vue 事件
         if (queryBtn.__vue__ && queryBtn.__vue__.$emit) {
           queryBtn.__vue__.$emit('click');
         } else {
-          // 如果沒有 Vue 實例，使用更安全的點擊方式
+          // 關鍵修復：禁用事件冒泡，避免干擾其他事件處理
           const clickEvent = new MouseEvent('click', {
-            bubbles: true,
+            bubbles: false,  // 修復：設為 false 避免事件污染
             cancelable: true,
             view: window
           });
           queryBtn.dispatchEvent(clickEvent);
         }
-        
-        // 延遲發送統計請求
+
+        // 延遲發送統計請求，並清除標記
         setTimeout(() => {
           window.postMessage({ source: 'run-vue-stats' }, window.location.origin);
+          window.__statsButtonTriggered = false; // 清除標記
         }, 1000);
       } catch (error) {
         console.error('觸發查詢按鈕時發生錯誤:', error);
         // 如果觸發查詢按鈕失敗，直接嘗試獲取統計數據
         setTimeout(() => {
           window.postMessage({ source: 'run-vue-stats' }, window.location.origin);
+          window.__statsButtonTriggered = false; // 清除標記
         }, 500);
       }
     };
 
     const exportBtn = document.createElement('button');
+    exportBtn.type = 'button';
     exportBtn.textContent = '匯出';
     exportBtn.className = 'el-button el-button--warning el-button--small';
     exportBtn.style.marginLeft = '5px';
@@ -968,6 +1105,7 @@
     };
 
     const exportAllBtn = document.createElement('button');
+    exportAllBtn.type = 'button';
     exportAllBtn.textContent = '全部匯出';
     exportAllBtn.className = 'el-button el-button--warning el-button--small';
     exportAllBtn.style.marginLeft = '5px';
@@ -976,6 +1114,7 @@
     };
 
     const panelBtn = document.createElement('button');
+    panelBtn.type = 'button';
     panelBtn.textContent = '資料面板';
     panelBtn.className = 'el-button el-button--info el-button--small';
     panelBtn.style.marginLeft = '5px';
@@ -989,6 +1128,7 @@
     };
 
     const printBtn = document.createElement('button');
+    printBtn.type = 'button';
     printBtn.textContent = '列印表格';
     printBtn.className = 'el-button el-button--success el-button--small';
     printBtn.style.marginLeft = '5px';
@@ -998,6 +1138,7 @@
 
     // 新增直接匯入按鈕
     const quickImportBtn = document.createElement('button');
+    quickImportBtn.type = 'button';
     quickImportBtn.textContent = '直接匯入';
     quickImportBtn.className = 'el-button el-button--danger el-button--small';
     quickImportBtn.style.marginLeft = '5px';
@@ -1073,6 +1214,7 @@
 
     // 新增遠端匯入按鈕
     const remoteQuickImportBtn = document.createElement('button');
+    remoteQuickImportBtn.type = 'button';
     remoteQuickImportBtn.textContent = '遠端匯入';
     remoteQuickImportBtn.className = 'el-button el-button--danger el-button--small';
     remoteQuickImportBtn.style.marginLeft = '5px';
@@ -1082,6 +1224,7 @@
 
     // 新增設定按鈕
     const settingsBtn = document.createElement('button');
+    settingsBtn.type = 'button';
     settingsBtn.textContent = '設定';
     settingsBtn.className = 'el-button el-button--info el-button--small';
     settingsBtn.style.marginLeft = '5px';
@@ -1161,10 +1304,20 @@
           </div>
           
           <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-            <button id="test-webhook-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonGreen}" 
+            <button id="test-webhook-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonGreen}"
                     style="background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
               測試連線
             </button>
+          </div>
+
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+            <button id="open-files-page-btn" style="${COMMON_STYLES.button}"
+                    style="background: #6f42c1; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+              🔗 開啟 Files.php 頁面
+            </button>
+            <div style="margin-top: 8px; font-size: 12px; color: #666; text-align: center;">
+              在新分頁中開啟遠端檔案管理頁面
+            </div>
           </div>
         </div>
       `;
@@ -1215,6 +1368,30 @@
         }
         
         await testWebhookConnection(url);
+      };
+
+      document.getElementById('open-files-page-btn').onclick = () => {
+        const input = document.getElementById('webhook-url-input');
+        const webhookUrl = input.value.trim();
+
+        if (!webhookUrl) {
+          showNotification('請先設定 Webhook 網址', 'warning');
+          return;
+        }
+
+        // 從 webhook 網址中移除查詢參數，保留完整路徑
+        try {
+          const url = new URL(webhookUrl);
+          // 移除查詢參數，保留完整路徑
+          const filesUrl = `${url.protocol}//${url.host}${url.pathname}`;
+
+          // 在新分頁中開啟 files.php
+          window.open(filesUrl, '_blank');
+          console.log(`開啟 Files.php 頁面: ${filesUrl}`);
+        } catch (error) {
+          console.error('解析 Webhook 網址失敗:', error);
+          showNotification('無效的 Webhook 網址格式', 'error');
+        }
       };
     }
 
@@ -2149,9 +2326,57 @@
     };
   }
 
+  // 添加Enter鍵支援，確保使用者可以正常查詢
+  function addEnterKeySupport() {
+    // 查找所有可能的輸入框
+    const inputs = document.querySelectorAll('input[type="text"], input[type="search"], .el-input__inner');
+
+    inputs.forEach(input => {
+      // 避免重複綁定
+      if (input.dataset.enterKeyBound) return;
+      input.dataset.enterKeyBound = 'true';
+
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault(); // 阻止預設行為
+
+          // 查找查詢按鈕
+          const queryBtn = Array.from(document.querySelectorAll('button.el-button'))
+            .find(b => /查\s*詢/.test(b.textContent));
+
+          if (queryBtn) {
+            // 確保這不是統計按鈕觸發的
+            if (!window.__statsButtonTriggered) {
+              try {
+                if (queryBtn.__vue__ && queryBtn.__vue__.$emit) {
+                  queryBtn.__vue__.$emit('click');
+                } else {
+                  const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                  });
+                  queryBtn.dispatchEvent(clickEvent);
+                }
+                console.log('Enter鍵觸發查詢成功');
+              } catch (error) {
+                console.error('Enter鍵觸發查詢失敗:', error);
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
   insertButtons();
+  addEnterKeySupport();
+
   const buttonContainer = document.querySelector('.el-button-group') || document.body;
-  new MutationObserver(insertButtons).observe(buttonContainer, { childList: true, subtree: true });
+  new MutationObserver(() => {
+    insertButtons();
+    addEnterKeySupport(); // 頁面更新後重新綁定Enter鍵
+  }).observe(buttonContainer, { childList: true, subtree: true });
   
 
   
@@ -2240,6 +2465,12 @@
       console.log('API 送出成功:', result);
       // 觸發查詢按鈕刷新表格
       setTimeout(() => {
+        // 檢查是否是統計按鈕觸發的，如果是則跳過避免循環
+        if (window.__statsButtonTriggered) {
+          console.log('跳過查詢按鈕觸發，因為這是統計按鈕發起的操作');
+          return;
+        }
+
         const queryBtn = Array.from(document.querySelectorAll('button.el-button')).find(b => /查\s*詢/.test(b.textContent));
         if (queryBtn) {
           try {
