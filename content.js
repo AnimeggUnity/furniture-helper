@@ -227,6 +227,13 @@
         maxWidth: '95vw'
       },
 
+      wide: {
+        // 匯入對話框：更寬更高，適合顯示檔案清單
+        width: '1200px',
+        maxWidth: '95vw',
+        maxHeight: '85vh'
+      },
+
       photo: {
         // 圖片預覽模態框：靠上顯示，特殊邊框
         top: '10%',
@@ -1489,6 +1496,130 @@
     header.appendChild(closeButton);
     newPanel.appendChild(header);
 
+    // 批次操作控制區域
+    const batchControlsContainer = document.createElement('div');
+    batchControlsContainer.style.cssText = 'padding: 10px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;';
+
+    // 全選控制
+    const selectAllContainer = document.createElement('div');
+    selectAllContainer.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+    const selectAllCheckbox = document.createElement('input');
+    selectAllCheckbox.type = 'checkbox';
+    selectAllCheckbox.id = 'select-all-items';
+    selectAllCheckbox.checked = true;
+    selectAllCheckbox.style.cssText = 'transform: scale(1.2);';
+
+    const selectAllLabel = document.createElement('label');
+    selectAllLabel.htmlFor = 'select-all-items';
+    selectAllLabel.textContent = '全選';
+    selectAllLabel.style.cssText = 'font-weight: bold; cursor: pointer;';
+
+    const selectedCountSpan = document.createElement('span');
+    selectedCountSpan.id = 'selected-count';
+    selectedCountSpan.textContent = `(已選 ${data.length} 項)`;
+    selectedCountSpan.style.cssText = 'color: #6c757d; font-size: 14px;';
+
+    selectAllContainer.appendChild(selectAllCheckbox);
+    selectAllContainer.appendChild(selectAllLabel);
+    selectAllContainer.appendChild(selectedCountSpan);
+
+    // 操作按鈕容器
+    const actionsContainer = document.createElement('div');
+    actionsContainer.style.cssText = 'display: flex; gap: 10px;';
+
+    // 批次匯出按鈕
+    const batchExportBtn = document.createElement('button');
+    batchExportBtn.textContent = '批次匯出';
+    batchExportBtn.style.cssText = applyComponentVariant('button', 'default', 'primary') + 'font-weight: bold;';
+    batchExportBtn.onclick = () => {
+      const selectedItems = getSelectedItems();
+      if (selectedItems.length === 0) {
+        showNotification('請至少選擇一個項目', 'warning');
+        return;
+      }
+
+      // 顯示下載設定警告，用戶確認後開始下載
+      showDownloadSettingsWarning(() => {
+        downloadMultipleFiles(selectedItems);
+      });
+    };
+
+    // 批次匯入按鈕
+    const batchImportBtn = document.createElement('button');
+    batchImportBtn.textContent = '批次匯入';
+    batchImportBtn.style.cssText = applyComponentVariant('button', 'default', 'success') + 'font-weight: bold;';
+    batchImportBtn.onclick = () => showImportModal();
+
+    // 批次刪除按鈕
+    const batchDeleteBtn = document.createElement('button');
+    batchDeleteBtn.textContent = '批次刪除';
+    batchDeleteBtn.style.cssText = applyComponentVariant('button', 'default', 'danger') + 'font-weight: bold;';
+    batchDeleteBtn.onclick = () => {
+      const selectedItems = getSelectedItems();
+      if (selectedItems.length === 0) {
+        showNotification('請至少選擇一個項目進行刪除', 'warning');
+        return;
+      }
+      showDeleteConfirmationModal(selectedItems);
+    };
+
+    actionsContainer.appendChild(batchExportBtn);
+    actionsContainer.appendChild(batchImportBtn);
+    actionsContainer.appendChild(batchDeleteBtn);
+
+    batchControlsContainer.appendChild(selectAllContainer);
+    batchControlsContainer.appendChild(actionsContainer);
+    newPanel.appendChild(batchControlsContainer);
+
+    // 全選功能
+    selectAllCheckbox.onchange = () => {
+      const itemCheckboxes = newPanel.querySelectorAll('.item-checkbox');
+      if (selectAllCheckbox.checked) {
+        // 全選時：使用建立時儲存的競標狀態，保持與預設選擇一致
+        itemCheckboxes.forEach(cb => {
+          const item = JSON.parse(cb.dataset.itemData);
+          const bidState = BID_STATUS_SYSTEM.determineState(item);
+          cb.checked = bidState !== 'hasBids'; // 只選擇無競標的項目
+        });
+      } else {
+        // 取消全選：清空所有選擇
+        itemCheckboxes.forEach(cb => {
+          cb.checked = false;
+        });
+      }
+      updateSelectedCount();
+    };
+
+    // 更新選中數量的函數
+    function updateSelectedCount() {
+      const itemCheckboxes = newPanel.querySelectorAll('.item-checkbox');
+      const checkedCount = Array.from(itemCheckboxes).filter(cb => cb.checked).length;
+      selectedCountSpan.textContent = `(已選 ${checkedCount} 項)`;
+
+      // 更新全選 checkbox 狀態
+      if (checkedCount === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+      } else if (checkedCount === itemCheckboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+      } else {
+        selectAllCheckbox.indeterminate = true;
+      }
+    }
+
+    // 獲取選中項目的函數
+    function getSelectedItems() {
+      const selectedItems = [];
+      const itemCheckboxes = newPanel.querySelectorAll('.item-checkbox:checked');
+      itemCheckboxes.forEach(cb => {
+        const itemIndex = parseInt(cb.dataset.itemIndex);
+        selectedItems.push(data[itemIndex]);
+      });
+      return selectedItems;
+    }
+
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.id = 'panel-search';
@@ -1521,6 +1652,23 @@
       const topRow = document.createElement('div');
       topRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
 
+      // 左側：選擇框 + 名稱資訊
+      const leftContainer = document.createElement('div');
+      leftContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-grow: 1;';
+
+      // 項目選擇 checkbox
+      const itemCheckbox = document.createElement('input');
+      itemCheckbox.type = 'checkbox';
+      itemCheckbox.className = 'item-checkbox';
+      // 根據競標狀態設定預設選擇：有競標者時取消選取
+      const bidState = BID_STATUS_SYSTEM.determineState(item);
+      itemCheckbox.checked = bidState !== 'hasBids'; // 有競標時不選中
+      itemCheckbox.dataset.itemIndex = i;
+      // 儲存項目資料供全選功能使用，確保一致性
+      itemCheckbox.dataset.itemData = JSON.stringify(item);
+      itemCheckbox.style.cssText = 'transform: scale(1.1);';
+      itemCheckbox.onchange = () => updateSelectedCount();
+
       const nameContainer = document.createElement('span');
       const photoIcon = document.createElement('span');
       photoIcon.className = 'photo-preview-icon';
@@ -1534,8 +1682,12 @@
       nameContainer.appendChild(photoIcon);
       nameContainer.appendChild(nameStrong);
 
+      // 左側容器組合：checkbox + 名稱
+      leftContainer.appendChild(itemCheckbox);
+      leftContainer.appendChild(nameContainer);
+
       const buttonContainer = document.createElement('div');
-      buttonContainer.style.cssText = 'display: flex; gap: 5px;';
+      buttonContainer.style.cssText = 'display: flex; gap: 5px; flex-shrink: 0;';
 
       const packageBtn = document.createElement('button');
       packageBtn.className = 'package-download-btn';
@@ -1606,7 +1758,7 @@
       buttonContainer.appendChild(packageBtn);
       buttonContainer.appendChild(downloadBtn);
 
-      topRow.appendChild(nameContainer);
+      topRow.appendChild(leftContainer);
       topRow.appendChild(buttonContainer);
 
       const bottomRow = document.createElement('div');
@@ -1617,6 +1769,9 @@
       div.appendChild(bottomRow);
       newPanel.appendChild(div);
     });
+
+    // 初始計算選中數量（扣掉有競標者）
+    updateSelectedCount();
 
     document.body.appendChild(newPanel);
   }
@@ -2285,6 +2440,84 @@
     }
   }
 
+  // 刪除單一項目 API
+  async function deleteProductAPI(itemData) {
+    console.log('🗑️ 開始刪除項目:', itemData.Name, itemData.ID);
+    try {
+      const response = await fetch('/BidMgr/api/Product/DeleteProduct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(itemData)
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      console.log('🗑️ 項目刪除成功:', result);
+      return { success: true, result };
+    } catch (error) {
+      console.error('❌ 項目刪除失敗:', error);
+      throw error;
+    }
+  }
+
+  // 批次刪除功能
+  async function processBatchDelete(selectedItems) {
+    showNotification(`開始批次刪除 ${selectedItems.length} 個項目...`, 'info');
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < selectedItems.length; i++) {
+      const item = selectedItems[i];
+      try {
+        showNotification(`正在刪除項目 ${i + 1}/${selectedItems.length}: ${item.Name}`, 'info', 2000);
+        await deleteProductAPI(item);
+        successCount++;
+        console.log(`✅ 刪除成功 ${i + 1}/${selectedItems.length}: ${item.Name}`);
+      } catch (error) {
+        errorCount++;
+        errors.push({ name: item.Name, error: error.message });
+        console.error(`❌ 刪除失敗 ${i + 1}/${selectedItems.length}: ${item.Name} - ${error.message}`);
+        showNotification(`項目 ${item.Name} 刪除失敗: ${error.message}`, 'error', 3000);
+      }
+
+      // 每次操作後稍微延遲，避免請求過於頻繁
+      if (i < selectedItems.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    // 顯示最終結果
+    const message = `批次刪除完成！成功: ${successCount} 項，失敗: ${errorCount} 項`;
+    if (errorCount === 0) {
+      showNotification(message, 'success', 5000);
+    } else if (successCount === 0) {
+      showNotification(message, 'error', 5000);
+    } else {
+      showNotification(message, 'warning', 5000);
+    }
+
+    // 刷新資料表格
+    if (successCount > 0) {
+      setTimeout(() => {
+        const queryBtn = Array.from(document.querySelectorAll('button.el-button')).find(b => /查\s*詢/.test(b.textContent));
+        if (queryBtn) {
+          try {
+            if (queryBtn.__vue__ && queryBtn.__vue__.$emit) {
+              queryBtn.__vue__.$emit('click');
+            } else {
+              const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+              queryBtn.dispatchEvent(clickEvent);
+            }
+            console.log('批次刪除完成，已刷新資料');
+          } catch (error) {
+            console.error('刷新資料時發生錯誤:', error);
+          }
+        }
+      }, 2000);
+    }
+  }
+
   async function uploadImagesWithCorrectAPI(photos) {
     const uploaded = [];
     for (let i = 0; i < photos.length; i++) {
@@ -2298,6 +2531,576 @@
       }
     }
     return uploaded;
+  }
+
+  // 批次下載前的設定提醒對話框
+  function showDownloadSettingsWarning(callback) {
+    const existingWarning = document.getElementById('download-settings-warning');
+    if (existingWarning) {
+      existingWarning.remove();
+    }
+
+    const warningModal = document.createElement('div');
+    warningModal.id = 'download-settings-warning';
+    warningModal.style.cssText = applyComponentVariant('modal', 'default') + 'z-index: 10001; max-width: 600px;';
+
+    warningModal.innerHTML = `
+      <h3 style="margin: 0 0 15px 0; color: #d63384; font-size: 20px;">⚠️ 批次下載前必須設定</h3>
+
+      <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+        <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 16px;">為了避免按到死，請先設定瀏覽器自動儲存：</p>
+        <ol style="margin: 0; padding-left: 20px; font-size: 16px;">
+          <li>打開 Chrome 設定 (chrome://settings/)</li>
+          <li>搜尋「下載」或點選左側「進階」→「下載」</li>
+          <li><strong>關閉</strong>「下載前詢問儲存位置」選項</li>
+          <li>設定好預設下載資料夾</li>
+        </ol>
+      </div>
+
+      <div style="background: #d1ecf1; border: 1px solid #b8daff; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+        <p style="margin: 0; font-size: 16px;">
+          <strong>說明：</strong>批次下載會產生多個檔案，如果沒有設定自動儲存，
+          每個檔案都會跳出儲存對話框，非常麻煩。
+        </p>
+      </div>
+
+      <div style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="cancel-download" style="${applyComponentVariant('button', 'default', 'secondary')}">
+          取消下載
+        </button>
+        <button id="confirm-download" style="${applyComponentVariant('button', 'default', 'primary')}">
+          我已設定完成，開始下載
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(warningModal);
+
+    // 綁定按鈕事件
+    document.getElementById('cancel-download').onclick = () => {
+      warningModal.remove();
+    };
+
+    document.getElementById('confirm-download').onclick = () => {
+      warningModal.remove();
+      if (callback && typeof callback === 'function') {
+        callback();
+      }
+    };
+
+    // ESC 鍵關閉
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        warningModal.remove();
+        document.removeEventListener('keydown', handleEsc);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+  }
+
+  // 多檔案順序下載功能
+  async function downloadMultipleFiles(selectedItems) {
+    if (!selectedItems || selectedItems.length === 0) {
+      showNotification('沒有選擇任何項目', 'warning');
+      return;
+    }
+
+    const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-');
+    const exportPrefix = `furniture_export_${timestamp}`;
+
+    // 創建主索引檔案
+    const manifest = {
+      exportInfo: {
+        exportDate: new Date().toISOString(),
+        exportType: 'BatchExport',
+        totalItems: selectedItems.length,
+        exportPrefix: exportPrefix
+      },
+      itemList: selectedItems.map(item => ({
+        autoID: item.AutoID,
+        filename: `${exportPrefix}_item_${item.AutoID}.json`,
+        name: item.Name || '未命名',
+        hasPhotos: item.Photos && item.Photos.length > 0,
+        createDate: item.CreateDate
+      }))
+    };
+
+    // 檔案下載佇列
+    const filesToDownload = [];
+
+    // 加入主索引檔案
+    filesToDownload.push({
+      name: `${exportPrefix}_manifest.json`,
+      content: JSON.stringify(manifest, null, 2),
+      type: 'application/json'
+    });
+
+    // 使用 PACK 方式處理每個項目（包含 base64 圖片）
+    for (const item of selectedItems) {
+      try {
+        const { Photos, ...restOfItem } = item;
+        const photosWithBase64 = [];
+
+        if (Photos && Array.isArray(Photos) && Photos.length > 0) {
+          for (const photo of Photos) {
+            const photoUrl = photo.Photo.startsWith('http') ? photo.Photo : location.origin + photo.Photo;
+            try {
+              const base64 = await convertImageToBase64(photoUrl);
+              photosWithBase64.push({ ...photo, Photo: base64, PhotoUrl: photoUrl });
+            } catch (error) {
+              console.warn(`圖片轉換失敗 ${photoUrl}:`, error);
+              photosWithBase64.push({ ...photo, PhotoUrl: photoUrl, Error: '圖片轉換失敗' });
+            }
+          }
+        }
+
+        const itemData = {
+          ...restOfItem,
+          Photos: photosWithBase64,
+          ExportInfo: {
+            ExportDate: new Date().toISOString(),
+            ExportType: 'BatchExportItem',
+            OriginalIndex: selectedItems.indexOf(item)
+          }
+        };
+
+        filesToDownload.push({
+          name: `${exportPrefix}_item_${item.AutoID}.json`,
+          content: JSON.stringify(itemData, null, 2),
+          type: 'application/json'
+        });
+
+      } catch (error) {
+        console.error(`處理項目 ${item.AutoID} 時發生錯誤:`, error);
+        ERROR_HANDLER.handle(error, 'file-processing');
+      }
+    }
+
+    // 順序下載所有檔案（間隔 200ms 避免瀏覽器限制）
+    showNotification(`開始下載 ${filesToDownload.length} 個檔案...`, 'info', 3000);
+
+    for (let i = 0; i < filesToDownload.length; i++) {
+      const file = filesToDownload[i];
+      setTimeout(() => {
+        try {
+          const blob = new Blob([file.content], { type: file.type });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          if (i === filesToDownload.length - 1) {
+            setTimeout(() => {
+              showNotification('所有檔案下載完成！', 'success', 3000);
+            }, 500);
+          }
+        } catch (error) {
+          console.error(`下載檔案 ${file.name} 失敗:`, error);
+          ERROR_HANDLER.handle(error, 'file-download');
+        }
+      }, i * 200);
+    }
+  }
+
+  // 選擇性匯入功能
+  function showImportModal() {
+    const importModal = document.createElement('div');
+    importModal.id = 'import-modal';
+    importModal.style.cssText = applyComponentVariant('modal', 'wide') + 'z-index: 10002;';
+
+    importModal.innerHTML = `
+      <h3 style="margin: 0 0 20px 0; color: #28a745; font-size: 18px;">📁 批次匯入資料</h3>
+
+      <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+        <p style="margin: 0 0 10px 0; font-weight: bold; color: #d73502; font-size: 16px;">📁 請選擇整個匯出目錄的所有檔案</p>
+        <input type="file" id="manifest-file-input" accept=".json" multiple
+               style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+        <div style="margin: 10px 0 0 0; font-size: 14px; color: #155724;">
+          <p style="margin: 0 0 5px 0; font-weight: bold;">操作方法：</p>
+          <ol style="margin: 0; padding-left: 20px;">
+            <li><strong>Ctrl+A</strong> 全選目錄中的所有 .json 檔案</li>
+            <li>或按住 <strong>Ctrl 鍵</strong>，依序選擇所有檔案</li>
+          </ol>
+          <p style="margin: 5px 0 0 0; color: #856404; background: #fff3cd; padding: 5px; border-radius: 3px;">
+            <strong>重點：</strong>manifest.json 和所有 item_*.json 檔案都在同一個目錄，一次選完即可
+          </p>
+        </div>
+      </div>
+
+      <div id="import-items-container" style="display: none;">
+        <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="margin: 0; color: #495057; font-size: 16px;">選擇要匯入的項目：</h4>
+            <div style="display: flex; gap: 10px;">
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <input type="checkbox" id="select-all-import" checked style="transform: scale(1.1);">
+                <span style="font-weight: bold;">全選</span>
+              </label>
+              <span id="import-selected-count" style="color: #6c757d; font-size: 14px;"></span>
+            </div>
+          </div>
+          <div id="import-items-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; background: white;">
+          </div>
+        </div>
+
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 14px;">
+            <strong>注意：</strong>請確保所有相關的項目檔案都在同一個資料夾中，匯入時會自動尋找對應的檔案。
+          </p>
+        </div>
+
+        <div style="text-align: right;">
+          <button id="start-import" style="${applyComponentVariant('button', 'default', 'success')}" disabled>
+            開始匯入到系統
+          </button>
+        </div>
+      </div>
+
+      <div style="text-align: right; margin-top: 20px;">
+        <button id="cancel-import" style="${applyComponentVariant('button', 'default', 'secondary')}">
+          取消
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(importModal);
+
+    // 綁定事件
+    setupImportModalEvents(importModal);
+  }
+
+  function setupImportModalEvents(modal) {
+    const manifestInput = modal.querySelector('#manifest-file-input');
+    const itemsContainer = modal.querySelector('#import-items-container');
+    const itemsList = modal.querySelector('#import-items-list');
+    const selectAllImport = modal.querySelector('#select-all-import');
+    const selectedCountSpan = modal.querySelector('#import-selected-count');
+    const startImportBtn = modal.querySelector('#start-import');
+    const cancelBtn = modal.querySelector('#cancel-import');
+
+    let manifestData = null;
+    let itemFiles = {};
+
+    // 處理多檔案選擇
+    manifestInput.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+
+      try {
+        // 找出 manifest 檔案
+        const manifestFile = files.find(file => file.name.includes('manifest.json'));
+        if (!manifestFile) {
+          throw new Error('請選擇包含 manifest.json 的檔案');
+        }
+
+        // 讀取 manifest
+        const text = await manifestFile.text();
+        manifestData = JSON.parse(text);
+
+        if (!manifestData.itemList || !Array.isArray(manifestData.itemList)) {
+          throw new Error('無效的 manifest 檔案格式');
+        }
+
+        // 建立檔案映射
+        itemFiles = {};
+        files.forEach(file => {
+          console.log('載入檔案:', file.name);
+          itemFiles[file.name] = file;
+        });
+
+        console.log('itemFiles 中的檔案:', Object.keys(itemFiles));
+
+        displayImportItems(manifestData.itemList, itemsList, selectedCountSpan);
+        itemsContainer.style.display = 'block';
+
+        // 顯示項目列表後，允許用戶直接開始匯入
+        startImportBtn.disabled = false;
+        startImportBtn.textContent = '開始匯入到系統';
+
+        showNotification(`已載入 ${files.length} 個檔案，包含 ${manifestData.itemList.length} 個項目`, 'success');
+
+      } catch (error) {
+        console.error('讀取檔案失敗:', error);
+        showNotification('讀取檔案失敗: ' + error.message, 'error');
+      }
+    };
+
+    // 移除不必要的項目檔案選擇邏輯
+
+    // 全選功能
+    selectAllImport.onchange = () => {
+      const itemCheckboxes = itemsList.querySelectorAll('.import-item-checkbox');
+      itemCheckboxes.forEach(cb => cb.checked = selectAllImport.checked);
+      updateImportSelectedCount();
+    };
+
+    // 更新選中數量
+    function updateImportSelectedCount() {
+      const itemCheckboxes = itemsList.querySelectorAll('.import-item-checkbox');
+      const checkedCount = Array.from(itemCheckboxes).filter(cb => cb.checked).length;
+      selectedCountSpan.textContent = `(已選 ${checkedCount} 項)`;
+    }
+
+    // 開始匯入
+    startImportBtn.onclick = async () => {
+      const selectedItems = getSelectedImportItems();
+      if (selectedItems.length === 0) {
+        showNotification('請至少選擇一個項目', 'warning');
+        return;
+      }
+
+      // 檢查是否有對應的項目檔案
+      const missingFiles = selectedItems.filter(item => !itemFiles[item.filename]);
+      if (missingFiles.length > 0) {
+        const missingNames = missingFiles.map(item => item.filename);
+        showNotification(`缺少檔案：${missingNames.join(', ')}，請確認已選擇所有相關檔案`, 'warning', 8000);
+        return;
+      }
+
+      // 直接開始匯入
+      modal.remove();
+      await processImportedItems(selectedItems, itemFiles);
+    };
+
+    // 取消
+    cancelBtn.onclick = () => modal.remove();
+
+    // ESC 關閉
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', handleEsc);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+
+    function getSelectedImportItems() {
+      const selectedItems = [];
+      const itemCheckboxes = itemsList.querySelectorAll('.import-item-checkbox:checked');
+      itemCheckboxes.forEach(cb => {
+        const itemData = JSON.parse(cb.dataset.itemData);
+        selectedItems.push(itemData);
+      });
+      return selectedItems;
+    }
+  }
+
+  // 刪除確認對話框
+  function showDeleteConfirmationModal(selectedItems) {
+    const deleteModal = document.createElement('div');
+    deleteModal.id = 'delete-confirmation-modal';
+    deleteModal.style.cssText = applyComponentVariant('modal', 'medium') + 'z-index: 10003;';
+
+    deleteModal.innerHTML = `
+      <h3 style="margin: 0 0 20px 0; color: #dc3545; font-size: 20px;">🗑️ 批次刪除確認</h3>
+
+      <div style="background: #f8d7da; border: 1px solid #f5c2c7; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+          <span style="font-size: 24px;">⚠️</span>
+          <h4 style="margin: 0; color: #721c24; font-size: 18px;">危險操作警告</h4>
+        </div>
+        <p style="margin: 0 0 10px 0; color: #721c24; font-size: 16px; font-weight: bold;">
+          您即將刪除 <span style="color: #dc3545; font-size: 20px;">${selectedItems.length}</span> 個項目
+        </p>
+        <p style="margin: 0; color: #721c24; font-size: 16px;">
+          此操作<strong>無法撤銷</strong>，請確認您真的要執行此操作。
+        </p>
+      </div>
+
+      <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 8px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+        <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 16px;">即將刪除的項目：</h4>
+        <div id="delete-items-list">
+          ${selectedItems.map((item, index) => `
+            <div style="padding: 8px; border-bottom: 1px solid #dee2e6; display: flex; align-items: center; gap: 10px; background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+              <span style="color: #dc3545; font-weight: bold; font-size: 16px;">[${item.AutoID}]</span>
+              <span style="flex: 1; font-size: 16px;">${item.Name || '未命名'}</span>
+              <span style="font-size: 14px; color: #6c757d;">${item.CategoryName || ''}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+        <p style="margin: 0; font-size: 16px; color: #856404;">
+          <strong>請再次確認：</strong>刪除後這些項目將從系統中永久移除，無法恢復。
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; gap: 15px;">
+        <button id="cancel-delete" style="${applyComponentVariant('button', 'default', 'secondary')}">
+          取消
+        </button>
+        <button id="confirm-delete" style="${applyComponentVariant('button', 'default', 'danger')} font-weight: bold;">
+          確認刪除 ${selectedItems.length} 個項目
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(deleteModal);
+
+    // 綁定事件
+    const confirmBtn = deleteModal.querySelector('#confirm-delete');
+    const cancelBtn = deleteModal.querySelector('#cancel-delete');
+
+    confirmBtn.onclick = async () => {
+      deleteModal.remove();
+      await processBatchDelete(selectedItems);
+    };
+
+    cancelBtn.onclick = () => deleteModal.remove();
+
+    // ESC 關閉
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        deleteModal.remove();
+        document.removeEventListener('keydown', handleEsc);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+  }
+
+  function displayImportItems(items, container, countSpan) {
+    container.innerHTML = '';
+
+    items.forEach((item, index) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.style.cssText = `
+        padding: 10px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};
+      `;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'import-item-checkbox';
+      checkbox.checked = true;
+      checkbox.dataset.itemData = JSON.stringify(item);
+      checkbox.style.cssText = 'transform: scale(1.1);';
+      checkbox.onchange = () => {
+        const allCheckboxes = container.querySelectorAll('.import-item-checkbox');
+        const checkedCount = Array.from(allCheckboxes).filter(cb => cb.checked).length;
+        countSpan.textContent = `(已選 ${checkedCount} 項)`;
+
+        const selectAll = document.getElementById('select-all-import');
+        if (checkedCount === 0) {
+          selectAll.indeterminate = false;
+          selectAll.checked = false;
+        } else if (checkedCount === allCheckboxes.length) {
+          selectAll.indeterminate = false;
+          selectAll.checked = true;
+        } else {
+          selectAll.indeterminate = true;
+        }
+      };
+
+      const itemInfo = document.createElement('div');
+      itemInfo.style.cssText = 'flex-grow: 1;';
+      itemInfo.innerHTML = `
+        <div style="font-weight: bold; color: #495057; font-size: 16px;">${item.name}</div>
+        <div style="font-size: 14px; color: #6c757d;">
+          ID: ${item.autoID} | 檔案: ${item.filename} |
+          ${item.hasPhotos ? '包含圖片' : '無圖片'} |
+          ${item.createDate ? item.createDate.split('T')[0] : '無日期'}
+        </div>
+      `;
+
+      itemDiv.appendChild(checkbox);
+      itemDiv.appendChild(itemInfo);
+      container.appendChild(itemDiv);
+    });
+
+    // 初始化計數
+    const checkedCount = items.length;
+    countSpan.textContent = `(已選 ${checkedCount} 項)`;
+  }
+
+  async function processImportedItems(selectedItems, itemFiles) {
+    showNotification(`開始批次匯入 ${selectedItems.length} 個項目到系統...`, 'info');
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < selectedItems.length; i++) {
+      const item = selectedItems[i];
+      try {
+        showNotification(`正在匯入項目 ${i + 1}/${selectedItems.length}: ${item.name}`, 'info', 2000);
+
+        console.log('查找檔案:', item.filename);
+        console.log('可用檔案:', Object.keys(itemFiles));
+
+        const file = itemFiles[item.filename];
+        if (!file) {
+          console.warn(`檔案不存在: ${item.filename}`);
+          console.warn(`可用的檔案名稱:`, Object.keys(itemFiles));
+          errorCount++;
+          continue;
+        }
+
+        const text = await file.text();
+        const itemData = JSON.parse(text);
+
+        // 驗證資料完整性
+        if (itemData.AutoID !== item.autoID) {
+          console.warn(`檔案內容不匹配: ${item.filename}`);
+          errorCount++;
+          continue;
+        }
+
+        // 調用現有的 API 上傳功能
+        await directSubmitToAPI(itemData);
+        successCount++;
+
+        console.log(`✅ 項目 ${item.name} (${item.autoID}) 匯入成功`);
+
+        // 項目間隔 1 秒，避免 API 請求過於頻繁
+        if (i < selectedItems.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+      } catch (error) {
+        console.error(`處理項目 ${item.filename} 時發生錯誤:`, error);
+        errorCount++;
+        showNotification(`項目 ${item.name} 匯入失敗: ${error.message}`, 'error', 3000);
+      }
+    }
+
+    // 顯示最終結果
+    const message = `批次匯入完成！成功: ${successCount} 項，失敗: ${errorCount} 項`;
+    if (errorCount === 0) {
+      showNotification(message, 'success', 5000);
+    } else if (successCount === 0) {
+      showNotification(message, 'error', 5000);
+    } else {
+      showNotification(message, 'warning', 5000);
+    }
+
+    // 刷新頁面資料
+    if (successCount > 0) {
+      setTimeout(() => {
+        const queryBtn = Array.from(document.querySelectorAll('button.el-button')).find(b => /查\s*詢/.test(b.textContent));
+        if (queryBtn) {
+          try {
+            if (queryBtn.__vue__ && queryBtn.__vue__.$emit) {
+              queryBtn.__vue__.$emit('click');
+            } else {
+              const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+              queryBtn.dispatchEvent(clickEvent);
+            }
+            console.log('批次匯入完成，已刷新資料');
+          } catch (error) {
+            console.error('刷新資料時發生錯誤:', error);
+          }
+        }
+      }, 2000);
+    }
   }
 
 })();
