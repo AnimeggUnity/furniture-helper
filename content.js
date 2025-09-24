@@ -26,38 +26,691 @@
     }
   }
 
-  // 統一樣式常數
-  const COMMON_STYLES = {
+  // ===================================================================
+  // UI 元件樣式系統 - 分層架構，避免字符串地獄
+  // ===================================================================
+
+  /**
+   * 基礎元件樣式定義
+   * 原則：每個元件只定義一次基礎樣式，通過組合產生變體
+   * 避免重複定義相同屬性（如 padding, border 等）
+   */
+  const UI_COMPONENTS = {
+    // 模態對話框樣式組
     modal: {
-      position: 'fixed', 
-      top: '20%', 
-      left: '50%', 
-      transform: 'translateX(-50%)',
-      background: '#fff', 
-      border: '0.5px solid #ddd', 
-      padding: '24px', 
-      zIndex: '9999',
-      width: 'auto', 
-      maxWidth: '90%', 
-      maxHeight: '80%', 
-      overflow: 'auto',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)', 
-      borderRadius: '6px'
+      // 所有模態框的共同基礎樣式
+      base: 'position:fixed;top:20%;left:50%;transform:translateX(-50%);background:#fff;border:0.5px solid #ddd;padding:24px;z-index:9999;width:auto;max-width:90%;max-height:80%;overflow:auto;box-shadow:0 2px 8px rgba(0,0,0,0.15);border-radius:6px;',
+      // 寬版模態框（統計頁面用）
+      wide: 'width:1000px;max-width:95vw;',
+      // 圖片預覽專用樣式
+      photo: 'top:10%;border:2px solid #007baf;z-index:10000;min-width:600px;max-width:90vw;'
     },
-    closeButton: 'position:absolute; top:12px; right:16px; cursor:pointer; font-size:24px;',
-    panel: `position: fixed; top: 80px; right: 0; width: 320px; height: calc(100% - 100px); overflow-y: auto; background: white; border-left: 2px solid #007baf; box-shadow: -2px 0 5px rgba(0,0,0,0.2); font-family: 'Segoe UI', 'Noto Sans TC', sans-serif; z-index: 99999;`,
-    panelHeader: 'margin: 0; background: #007baf; color: white; padding: 12px; font-size: 16px; display: flex; justify-content: space-between;',
-    searchInput: 'width: calc(100% - 20px); padding: 8px; margin: 10px; border: 1px solid #ccc; border-radius: 4px;',
-    button: 'border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 12px;',
-    buttonBlue: 'background: #007baf; color: white;',
-    buttonGreen: 'background: #28a745; color: white;',
-    processingMsg: 'position:fixed;top:30px;right:30px;background:#fff;padding:16px 32px;border-radius:8px;box-shadow:0 2px 8px #0002;z-index:9999;font-size:18px;',
-    notification: 'position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:6px;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;',
-    notifySuccess: 'background:#28a745;color:white;',
-    notifyError: 'background:#E53E3E;color:white;',
-    notifyWarning: 'background:#FF6B35;color:white;'
+
+    // 按鈕樣式組 - 統一 padding 和基本屬性
+    button: {
+      // 所有按鈕的基礎樣式（統一 padding 為 8px 16px）
+      base: 'border:none;padding:8px 16px;cursor:pointer;border-radius:4px;font-size:12px;',
+      // 主要操作按鈕（藍色）
+      primary: 'background:#007baf;color:white;',
+      // 成功操作按鈕（綠色）
+      success: 'background:#28a745;color:white;',
+      // 危險操作按鈕（紅色）
+      danger: 'background:#dc3545;color:white;',
+      // 次要操作按鈕（灰色）
+      secondary: 'background:#6c757d;color:white;',
+      // 特殊紫色按鈕
+      purple: 'background:#6f42c1;color:white;',
+      // 小尺寸按鈕
+      small: 'padding:5px 10px;font-size:11px;'
+    },
+
+    // 面板樣式組
+    panel: {
+      // 基礎面板樣式（右側滑出）
+      base: 'position:fixed;top:80px;right:0;width:320px;height:calc(100% - 100px);overflow-y:auto;background:white;border-left:2px solid #007baf;box-shadow:-2px 0 5px rgba(0,0,0,0.2);font-family:"Segoe UI","Noto Sans TC",sans-serif;z-index:99999;',
+      // 寬版面板
+      wide: 'width:400px;',
+      // 面板標題列
+      header: 'margin:0;background:#007baf;color:white;padding:12px;font-size:16px;display:flex;justify-content:space-between;'
+    },
+
+    // 輸入框樣式組
+    input: {
+      // 搜索輸入框
+      search: 'width:calc(100% - 20px);padding:8px;margin:10px;border:1px solid #ccc;border-radius:4px;',
+      // URL 輸入框
+      url: 'width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;'
+    },
+
+    // 通知系統樣式組
+    notification: {
+      // 通知的基礎定位和外觀
+      base: 'position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:6px;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:14px;',
+      // 成功通知（綠色）
+      success: 'background:#28a745;color:white;',
+      // 錯誤通知（紅色）
+      error: 'background:#E53E3E;color:white;',
+      // 警告通知（橙色）
+      warning: 'background:#FF6B35;color:white;',
+      // 資訊通知（藍色）
+      info: 'background:#667eea;color:white;'
+    },
+
+    // 處理中訊息樣式
+    processing: {
+      base: 'position:fixed;top:30px;right:30px;background:#fff;padding:16px 32px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.13);z-index:9999;font-size:18px;'
+    },
+
+    // 關閉按鈕樣式
+    closeButton: {
+      base: 'position:absolute;top:12px;right:16px;cursor:pointer;font-size:24px;',
+      white: 'background:none;border:none;color:white;font-size:16px;cursor:pointer;'
+    }
   };
-  
+
+  /**
+   * 樣式組合器 - 將多個樣式片段組合成完整的 CSS 字符串
+   * 避免手動字符串拼接的錯誤和混亂
+   *
+   * @param {...string} styles - 要組合的樣式字符串
+   * @returns {string} 組合後的完整樣式字符串
+   */
+  function combineStyles(...styles) {
+    return styles.filter(Boolean).join('');
+  }
+
+  /**
+   * 通知類型到樣式的映射表
+   * 用於 showNotification 函數的動態樣式選擇
+   */
+  const NOTIFICATION_TYPE_MAP = {
+    success: UI_COMPONENTS.notification.success,
+    error: UI_COMPONENTS.notification.error,
+    warning: UI_COMPONENTS.notification.warning,
+    info: UI_COMPONENTS.notification.info
+  };
+
+  // ===================================================================
+  // 狀態系統 - 消除條件分支，用查找表實現狀態處理
+  // ===================================================================
+
+  /**
+   * 商品狀態系統 - 消除 IsPay/IsGet 的 if/else 地獄
+   * 用查找表代替 2^2=4 種條件分支組合
+   */
+  const ITEM_STATUS_SYSTEM = {
+    // 狀態組合查找表：根據付款和取貨狀態決定樣式和文字
+    combinations: {
+      'paid-delivered': {
+        text: '已付/已取',
+        color: '#28a745',        // 綠色 - 完成狀態
+        borderColor: '#28a745',
+        background: '#f8f9ff',
+        icon: '✓'
+      },
+      'paid-pending': {
+        text: '已付/未取',
+        color: '#ffc107',        // 橙色 - 待取貨
+        borderColor: '#ffc107',
+        background: '#fff8e1',
+        icon: '⏳'
+      },
+      'unpaid-delivered': {
+        text: '未付/已取',
+        color: '#dc3545',        // 紅色 - 異常狀態
+        borderColor: '#dc3545',
+        background: '#ffebee',
+        icon: '⚠'
+      },
+      'unpaid-pending': {
+        text: '未付/未取',
+        color: '#6c757d',        // 灰色 - 初始狀態
+        borderColor: '#ddd',
+        background: '#f8f9fa',
+        icon: '○'
+      }
+    },
+
+    /**
+     * 根據付款和取貨狀態獲取狀態配置
+     * @param {boolean} isPaid - 是否已付款
+     * @param {boolean} isDelivered - 是否已取貨
+     * @returns {Object} 狀態配置物件
+     */
+    getStatus(isPaid, isDelivered) {
+      const key = `${isPaid ? 'paid' : 'unpaid'}-${isDelivered ? 'delivered' : 'pending'}`;
+      return this.combinations[key] || this.combinations['unpaid-pending'];
+    },
+
+    /**
+     * 生成狀態顯示的 HTML
+     * @param {boolean} isPaid - 是否已付款
+     * @param {boolean} isDelivered - 是否已取貨
+     * @returns {string} 狀態 HTML 字符串
+     */
+    generateStatusHTML(isPaid, isDelivered) {
+      const status = this.getStatus(isPaid, isDelivered);
+      return `<span style="color:${status.color};font-weight:600;text-align:center;">${status.text}</span>`;
+    },
+
+    /**
+     * 應用狀態樣式到元素
+     * @param {HTMLElement} element - 要應用樣式的元素
+     * @param {boolean} isPaid - 是否已付款
+     * @param {boolean} isDelivered - 是否已取貨
+     */
+    applyStatusStyle(element, isPaid, isDelivered) {
+      const status = this.getStatus(isPaid, isDelivered);
+      element.style.borderLeftColor = status.borderColor;
+      if (status.background && status.background !== '#f8f9fa') {
+        element.style.background = status.background;
+      }
+    }
+  };
+
+  // ===================================================================
+  // 元件變體系統 - 消除手動屬性調整，用配置驅動
+  // ===================================================================
+
+  /**
+   * 元件變體配置系統 - 消除到處硬編碼的樣式調整
+   * 每種元件的變體都預先配置，避免手動計算和調整
+   */
+  const COMPONENT_VARIANTS = {
+    // 模態框變體配置
+    modal: {
+      default: {},  // 使用基礎樣式
+
+      stats: {
+        // 統計模態框：寬版，適合顯示大量數據
+        width: '1000px',
+        maxWidth: '95vw'
+      },
+
+      photo: {
+        // 圖片預覽模態框：靠上顯示，特殊邊框
+        top: '10%',
+        border: '2px solid #007baf',
+        zIndex: '10000',
+        minWidth: '600px',
+        maxWidth: '90vw'
+      },
+
+      form: {
+        // 表單模態框：中等寶度，更多填充
+        width: '600px',
+        padding: '30px'
+      }
+    },
+
+    // 面板變體配置
+    panel: {
+      default: {},  // 使用基礎樣式 (320px)
+
+      wide: {
+        // 寬版面板：設定頁面等
+        width: '400px'
+      },
+
+      narrow: {
+        // 窄版面板：簡單列表
+        width: '280px'
+      },
+
+      custom: {
+        // 自定義寬度面板：遠端匯入等
+        width: '380px'
+      }
+    },
+
+    // 按鈕變體配置（尺寸變體）
+    button: {
+      default: {},  // 使用基礎樣式
+
+      small: {
+        // 小按鈕：工具列用
+        padding: '5px 10px',
+        fontSize: '11px'
+      },
+
+      large: {
+        // 大按鈕：主要操作
+        padding: '12px 24px',
+        fontSize: '14px'
+      },
+
+      fullWidth: {
+        // 全寬按鈕：面板底部
+        width: '100%'
+      },
+
+      compact: {
+        // 緊湊按鈕：表格中使用
+        padding: '4px 8px',
+        fontSize: '10px'
+      }
+    }
+  };
+
+  /**
+   * 元件變體應用器 - 根據配置生成完整樣式
+   * @param {string} componentType - 元件類型 (modal, panel, button)
+   * @param {string} variant - 變體名稱 (default, wide, small等)
+   * @param {string} theme - 主題樣式 (primary, success等)
+   * @returns {string} 完整的 CSS 樣式字符串
+   */
+  function applyComponentVariant(componentType, variant = 'default', theme = null) {
+    const baseStyle = UI_COMPONENTS[componentType]?.base || '';
+    const variantConfig = COMPONENT_VARIANTS[componentType]?.[variant] || {};
+    const themeStyle = theme ? (UI_COMPONENTS[componentType]?.[theme] || '') : '';
+
+    // 將變體配置轉換為 CSS 字符串
+    const variantStyle = Object.entries(variantConfig)
+      .map(([key, value]) => {
+        // 將 camelCase 轉換為 kebab-case
+        const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+        return `${cssKey}:${value};`;
+      })
+      .join('');
+
+    return combineStyles(baseStyle, variantStyle, themeStyle);
+  }
+
+  // ===================================================================
+  // 競標狀態系統 - 消除多層條件判斷，用狀態機處理競標顯示
+  // ===================================================================
+
+  /**
+   * 競標狀態機系統 - 消除 HasBids/BidPrice/Bidder/NickName 的條件分支地獄
+   * 用狀態機 + 查找表代替 3層嵌套的 if/else 判斷
+   */
+  const BID_STATUS_SYSTEM = {
+    // 競標狀態定義：每種狀態的樣式和行為
+    states: {
+      loading: {
+        // 正在查詢競標資料
+        text: '查詢中...',
+        color: '#6c757d',
+        background: '#f8f9fa',
+        icon: '⏳',
+        displayMode: 'simple'
+      },
+      noBids: {
+        // 確認無競標
+        text: '無競標',
+        color: '#856404',
+        background: '#fff3cd',
+        icon: '○',
+        displayMode: 'simple'
+      },
+      hasBids: {
+        // 有競標資料
+        text: '',  // 動態生成
+        color: '#0056b3',
+        background: '#f8f9ff',
+        icon: '💰',
+        displayMode: 'detailed'
+      }
+    },
+
+    /**
+     * 根據商品資料判斷競標狀態
+     * @param {Object} item - 商品物件
+     * @returns {string} 狀態鍵 (loading|noBids|hasBids)
+     */
+    determineState(item) {
+      // 檢查是否已完成競標資料查詢
+      if (!item.hasOwnProperty('HasBids') || item.BidChecked === false) {
+        return 'loading';
+      }
+
+      // 明確標記無競標
+      if (item.HasBids === false) {
+        return 'noBids';
+      }
+
+      // 有競標且有價格和出價者
+      if (item.HasBids === true && item.BidPrice && item.Bidder) {
+        return 'hasBids';
+      }
+
+      // 預設狀態（安全回退）
+      return 'loading';
+    },
+
+    /**
+     * 格式化出價者顯示名稱 - 消除嵌套條件分支
+     * @param {Object} item - 商品物件
+     * @returns {string} 格式化的顯示名稱
+     */
+    formatBidderName(item) {
+      const { NickName, Bidder } = item;
+
+      // 使用查找表而非 if/else 巢狀
+      const nameFormats = {
+        'both': () => `${NickName}(${Bidder})`,      // 有暱稱有ID
+        'nickname': () => NickName,                  // 只有暱稱
+        'bidder': () => Bidder,                      // 只有ID
+        'none': () => '未知出價者'                    // 都沒有（異常情況）
+      };
+
+      // 決定使用哪種格式
+      let formatKey = 'none';
+      if (NickName && Bidder) formatKey = 'both';
+      else if (NickName) formatKey = 'nickname';
+      else if (Bidder) formatKey = 'bidder';
+
+      return nameFormats[formatKey]();
+    },
+
+    /**
+     * 生成競標資訊的完整顯示HTML - 統一接口
+     * @param {Object} item - 商品物件
+     * @param {string} displayType - 顯示類型 ('inline'|'block')
+     * @returns {string} 競標顯示HTML
+     */
+    generateBidDisplay(item, displayType = 'inline') {
+      const state = this.determineState(item);
+      const config = this.states[state];
+
+      if (config.displayMode === 'simple') {
+        // 簡單狀態：loading, noBids
+        const style = `color:${config.color};`;
+        return displayType === 'inline'
+          ? `<span style="${style}">${config.text}</span>`
+          : `<br><span style="${style}">${config.text}</span>`;
+      }
+
+      // 詳細狀態：hasBids
+      const bidderName = this.formatBidderName(item);
+      const priceStyle = `color:${config.color};font-weight:600;`;
+      const nameStyle = `color:#666;`;
+
+      if (displayType === 'inline') {
+        return `<span style="${priceStyle}">${item.BidPrice}元</span><span style="${nameStyle}"> / ${bidderName}</span>`;
+      } else {
+        return `<br><span style="background-color:#ffebee;padding:2px 4px;border-radius:3px;">最高競標價: ${item.BidPrice} 元<br>最高出價者: ${bidderName}</span>`;
+      }
+    },
+
+    /**
+     * 應用競標狀態樣式到容器元素
+     * @param {HTMLElement} element - 要應用樣式的元素
+     * @param {Object} item - 商品物件
+     */
+    applyContainerStyle(element, item) {
+      const state = this.determineState(item);
+      const config = this.states[state];
+
+      if (config.background && config.background !== '#f8f9fa') {
+        element.style.background = config.background;
+      }
+    }
+  };
+
+  // ===================================================================
+  // 錯誤處理系統 - 消除散布的 try/catch，統一錯誤處理機制
+  // ===================================================================
+
+  /**
+   * 統一錯誤處理系統 - 消除代碼中混亂的錯誤處理方式
+   * 提供一致的用戶體驗和開發者友好的錯誤追蹤
+   */
+  const ERROR_HANDLER = {
+    // 錯誤上下文映射 - 為不同操作提供用戶友好的錯誤訊息
+    contextMessages: {
+      // 檔案處理相關
+      'file-upload': '檔案上傳時發生錯誤',
+      'file-download': '檔案下載時發生錯誤',
+      'file-processing': '檔案處理時發生錯誤',
+      'json-parsing': 'JSON 資料解析時發生錯誤',
+
+      // 網路請求相關
+      'api-call': 'API 請求時發生錯誤',
+      'network-request': '網路請求時發生錯誤',
+      'remote-import': '遠端匯入時發生錯誤',
+
+      // UI 操作相關
+      'ui-operation': '介面操作時發生錯誤',
+      'dom-manipulation': 'DOM 操作時發生錯誤',
+      'event-handling': '事件處理時發生錯誤',
+
+      // 資料處理相關
+      'data-conversion': '資料轉換時發生錯誤',
+      'local-storage': '本地儲存操作時發生錯誤',
+      'validation': '資料驗證時發生錯誤',
+
+      // 預設
+      'unknown': '操作時發生錯誤'
+    },
+
+    /**
+     * 統一錯誤處理入口
+     * @param {Error} error - 錯誤物件
+     * @param {string} context - 錯誤上下文（用於查找合適的訊息）
+     * @param {Object} options - 選項配置
+     * @param {boolean} options.userFriendly - 是否顯示用戶友好訊息（預設true）
+     * @param {boolean} options.showNotification - 是否顯示通知（預設true）
+     * @param {boolean} options.logToConsole - 是否記錄到控制台（預設true）
+     * @param {string} options.fallbackMessage - 自定義回退訊息
+     */
+    handle(error, context = 'unknown', options = {}) {
+      const {
+        userFriendly = true,
+        showNotification = true,
+        logToConsole = true,
+        fallbackMessage = null
+      } = options;
+
+      // 1. 控制台日誌（開發者用）
+      if (logToConsole) {
+        console.error(`[${context.toUpperCase()}]`, error);
+      }
+
+      // 2. 用戶通知（用戶友好）
+      if (showNotification && userFriendly && typeof window.showNotification === 'function') {
+        const userMessage = this.getUserFriendlyMessage(error, context, fallbackMessage);
+        window.showNotification(userMessage, 'error', APP_CONSTANTS.TIMING.NOTIFICATION_ERROR_DURATION);
+      }
+
+      // 3. 返回標準化錯誤資訊（供呼叫者使用）
+      return {
+        context,
+        originalError: error,
+        message: error.message,
+        userMessage: this.getUserFriendlyMessage(error, context, fallbackMessage),
+        timestamp: new Date().toISOString()
+      };
+    },
+
+    /**
+     * 獲取用戶友好的錯誤訊息
+     * @param {Error} error - 原始錯誤
+     * @param {string} context - 錯誤上下文
+     * @param {string} fallbackMessage - 自定義回退訊息
+     * @returns {string} 用戶友好的錯誤訊息
+     */
+    getUserFriendlyMessage(error, context, fallbackMessage) {
+      if (fallbackMessage) return fallbackMessage;
+
+      const contextMessage = this.contextMessages[context] || this.contextMessages['unknown'];
+
+      // 對於特定錯誤類型，提供更具體的訊息
+      if (error.name === 'SyntaxError') {
+        return `${contextMessage}：資料格式不正確`;
+      }
+      if (error.name === 'NetworkError' || error.message.includes('Failed to fetch')) {
+        return `${contextMessage}：網路連線問題，請檢查網路狀態`;
+      }
+      if (error.name === 'TypeError') {
+        return `${contextMessage}：資料類型錯誤`;
+      }
+
+      // 預設：上下文訊息 + 簡化的錯誤詳情
+      return `${contextMessage}：${error.message}`;
+    },
+
+    /**
+     * 錯誤包裝器 - 將任何函數包裝為統一錯誤處理
+     * @param {Function} fn - 要執行的函數
+     * @param {string} context - 錯誤上下文
+     * @param {Object} options - 錯誤處理選項
+     * @returns {Promise<*>} 函數執行結果或錯誤資訊
+     */
+    async withErrorHandling(fn, context, options = {}) {
+      try {
+        return await fn();
+      } catch (error) {
+        const errorInfo = this.handle(error, context, options);
+        // 決定是否重新拋出錯誤（根據配置）
+        if (options.rethrow !== false) {
+          throw errorInfo;
+        }
+        return null;
+      }
+    },
+
+    /**
+     * 創建上下文特定的錯誤處理器
+     * @param {string} context - 錯誤上下文
+     * @param {Object} defaultOptions - 預設選項
+     * @returns {Function} 上下文特定的錯誤處理器
+     */
+    createHandler(context, defaultOptions = {}) {
+      return (error, options = {}) => {
+        return this.handle(error, context, { ...defaultOptions, ...options });
+      };
+    }
+  };
+
+  // ===================================================================
+  // 應用常數定義 - 消除魔法數字，提升代碼可讀性
+  // ===================================================================
+
+  /**
+   * 應用常數 - 將所有魔法數字語義化，便於維護和理解
+   */
+  const APP_CONSTANTS = {
+    // 時間相關常數（毫秒）
+    TIMING: {
+      NOTIFICATION_DEFAULT_DURATION: 3000,    // 預設通知顯示時間
+      NOTIFICATION_ERROR_DURATION: 4000,      // 錯誤通知顯示時間
+      HIGHLIGHT_FADE_DURATION: 2000,          // 高亮消退時間
+      STATS_QUERY_DELAY: 1000,                // 統計查詢延遲
+      QUERY_FALLBACK_DELAY: 500,              // 查詢回退延遲
+      API_REFRESH_DELAY: 2000,                // API 刷新延遲
+      PROGRESS_REMOVE_DELAY: 2000,            // 進度條移除延遲
+      IMAGE_PROCESSING_DELAY: 200             // 圖片處理間隔
+    },
+
+    // 檔案大小相關常數（bytes）
+    FILE_SIZE: {
+      MB: 1024 * 1024,                        // 1MB 大小
+      IMAGE_WARNING_THRESHOLD: 2 * 1024 * 1024, // 圖片警告閾值 2MB
+      KB: 1024                                 // 1KB 大小
+    },
+
+    // UI 尺寸相關常數
+    UI_DIMENSIONS: {
+      MODAL_MIN_WIDTH: 600,                    // 模態框最小寬度
+      PANEL_DEFAULT_WIDTH: 320,               // 面板預設寬度
+      PANEL_WIDE_WIDTH: 400,                  // 寬版面板寬度
+      PANEL_CUSTOM_WIDTH: 380,                // 自定義面板寬度
+      MODAL_STATS_WIDTH: 1000                 // 統計模態框寬度
+    },
+
+    // Z-index 層級管理
+    Z_INDEX: {
+      PANEL: 99999,                           // 面板層級
+      MODAL: 9999,                            // 模態框層級
+      MODAL_HIGH: 10000,                      // 高層級模態框
+      NOTIFICATION: 10000,                    // 通知層級
+      PROGRESS: 10000                         // 進度條層級
+    },
+
+    // API 相關常數
+    API: {
+      DEFAULT_DISTRICT_ID: '231',             // 預設行政區ID
+      CATEGORY_DEFAULT_ID: 13,                // 預設類別ID
+      AUCTION_DURATION_DAYS: 14,              // 預設競標持續天數
+      IMAGE_QUALITY: 0.8                      // 圖片壓縮品質
+    },
+
+    // 顏色常數（語義化）
+    COLORS: {
+      PRIMARY: '#007baf',                     // 主色調
+      SUCCESS: '#28a745',                     // 成功色
+      WARNING: '#ffc107',                     // 警告色
+      DANGER: '#dc3545',                      // 危險色
+      INFO: '#667eea',                        // 資訊色
+      SECONDARY: '#6c757d',                   // 次要色
+      TEXT_MUTED: '#666'                      // 文字淡色
+    },
+
+    // UI組件相關常數
+    UI_COMPONENTS: {
+      // 進度條相關常數
+      PROGRESS: {
+        INITIAL: '20%',
+        PROCESSING_BASE: 20,
+        PROCESSING_RANGE: 60,
+        FINAL: '90%',
+        COMPLETE: '100%'
+      }
+    },
+
+    // 業務邏輯常數
+    BUSINESS: {
+      DEFAULT_AUCTION_DURATION_DAYS: 14       // 預設競標天數
+    },
+
+    // 時間常數別名（向後相容）
+    TIMING: {
+      NOTIFICATION_DEFAULT_DURATION: 3000,
+      NOTIFICATION_ERROR_DURATION: 4000,
+      HIGHLIGHT_RESET_DELAY: 2000,
+      API_RETRY_DELAY: 200,
+      PROGRESS_CLEANUP_DELAY: 2000
+    }
+  };
+
+  // ===================================================================
+  // 應用狀態管理 - 消除全域變數污染，建立命名空間
+  // ===================================================================
+
+  /**
+   * 家具助手應用狀態管理 - 替代全域變數的命名空間
+   * 所有應用狀態都封裝在此物件中，避免全域命名空間污染
+   */
+  const FurnitureHelper = {
+    // 應用內部狀態
+    state: {
+      isStatsButtonTriggered: false,  // 替代 window.__statsButtonTriggered
+      version: '3.2.0'
+    },
+
+    // 狀態管理方法
+    setState(key, value) {
+      if (this.state.hasOwnProperty(key)) {
+        this.state[key] = value;
+        console.debug(`[FurnitureHelper] State updated: ${key} = ${value}`);
+      }
+    },
+
+    getState(key) {
+      return this.state[key];
+    },
+
+    // 統計按鈕狀態管理
+    setStatsTriggered(value) {
+      this.setState('isStatsButtonTriggered', value);
+    },
+
+    isStatsTriggered() {
+      return this.getState('isStatsButtonTriggered');
+    }
+  };
+
   // 類別映射表 (對應 webhook.php 的 CATEGORY_MAPPING)
   const CATEGORY_MAPPING = {
     '茶几': 6,
@@ -78,23 +731,36 @@
     '其他': 32
   };
   
-  // 統一通知系統
-  function showNotification(message, type = 'info', duration = 3000) {
+  // 注意：原有的 NOTIFY_STYLE_MAP 已整合到 NOTIFICATION_TYPE_MAP
+
+  /**
+   * 統一通知系統 - 使用新的樣式組合器
+   * @param {string} message - 通知訊息
+   * @param {string} type - 通知類型 (success|error|warning|info)
+   * @param {number} duration - 顯示時長（毫秒）
+   */
+  function showNotification(message, type = 'info', duration = APP_CONSTANTS.TIMING.NOTIFICATION_DEFAULT_DURATION) {
     const notification = document.createElement('div');
-    notification.style.cssText = COMMON_STYLES.notification + 
-      (type === 'success' ? COMMON_STYLES.notifySuccess : 
-       type === 'error' ? COMMON_STYLES.notifyError : 
-       type === 'warning' ? COMMON_STYLES.notifyWarning : 
-       'background:#667eea;color:white;');
+    const typeStyle = NOTIFICATION_TYPE_MAP[type] || NOTIFICATION_TYPE_MAP.info;
+
+    // 使用變體系統：統一的樣式應用方式
+    notification.style.cssText = combineStyles(
+      UI_COMPONENTS.notification.base,
+      typeStyle
+    );
+
     notification.textContent = message;
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
       if (notification.parentNode) {
         notification.remove();
       }
     }, duration);
   }
+
+  // 暴露showNotification到全域，供ERROR_HANDLER使用
+  window.showNotification = showNotification;
   
   // 注入 inject.js 到頁面
   const script = document.createElement('script');
@@ -172,7 +838,7 @@
       console.log(` 預估檔案大小: ${(estimatedFileSize / 1024).toFixed(1)}KB`);
       
       // 如果檔案太大，給出警告
-      if (estimatedFileSize > 2 * 1024 * 1024) { // 2MB
+      if (estimatedFileSize > APP_CONSTANTS.FILE_SIZE.IMAGE_WARNING_THRESHOLD) {
         console.warn(`警告: 圖片檔案較大: ${(estimatedFileSize / 1024 / 1024).toFixed(1)}MB`);
       }
       
@@ -244,31 +910,31 @@
 
 
 
-  window.addEventListener('message', event => {
-    if (event.source !== window || event.origin !== window.location.origin) return;
-    const msg = event.data;
-    if (!msg || !msg.source) {
-      console.error('無效的消息格式', msg);
-      return;
-    }
-    if (msg.source === 'vue-stats') {
+  // 訊息處理查找表
+  const messageHandlers = {
+    'vue-stats': (msg) => {
       if (!msg.hierarchicalStats) {
         showNotification('數據格式錯誤', 'error');
         return;
       }
       showHierarchicalModal(msg.hierarchicalStats);
+    },
+    'vue-panel-data': (msg) => buildPanel(msg.data || []),
+    'vue-print': (msg) => printTable(msg.data || [])
+  };
+
+  window.addEventListener('message', event => {
+    if (event.source !== window || event.origin !== window.location.origin) return;
+    
+    const msg = event.data;
+    if (!msg || !msg.source) {
+      console.error('無效的消息格式', msg);
+      return;
     }
-    if (msg.source === 'vue-export') {
-      exportToCSV(msg.data || []);
-    }
-    if (msg.source === 'vue-export-all') {
-      exportAllToCSV(msg.data || []);
-    }
-    if (msg.source === 'vue-panel-data') {
-      buildPanel(msg.data || []);
-    }
-    if (msg.source === 'vue-print') {
-      printTable(msg.data || []);
+
+    const handler = messageHandlers[msg.source];
+    if (handler) {
+      handler(msg);
     }
   });
 
@@ -278,11 +944,11 @@
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'vue-stats-modal';
-      Object.assign(modal.style, COMMON_STYLES.modal);
-      modal.style.width = '1000px';
-      modal.style.maxWidth = '95vw';
+
+      // 使用變體系統：統計模態框變體
+      modal.style.cssText = applyComponentVariant('modal', 'stats');
       modal.innerHTML = `
-        <span style="${COMMON_STYLES.closeButton}"
+        <span style="${UI_COMPONENTS.closeButton.base}"
               onclick="this.parentNode.style.display='none'">X</span>
         <h3 style="font-size:24px; margin-top:0; text-align:center; color:#333;">📊 統計資料總覽</h3>
         <div style="text-align: center; margin-bottom: 20px; padding: 0 20px;">
@@ -353,219 +1019,246 @@
     modal.style.display = 'block';
   }
 
-  // 建立統計樹的輔助函數
+  // ===================================================================
+  // 統計樹系統 - 拆分200行怪獸函數，遵循單一職責原則
+  // ===================================================================
+
+  /**
+   * 統計樹工廠 - 主函數，負責協調各個子元件
+   * @param {Object} dateData - 日期統計資料
+   * @param {string} title - 標題
+   * @param {string} color - 主題顏色
+   * @returns {HTMLElement} 統計樹DOM元素
+   */
   function createStatsTree(dateData, title, color) {
+    const section = createStatsSection(title, color);
+    const content = section.querySelector('.stats-content');
+
+    // 按年份排序並處理
+    const sortedYears = Object.keys(dateData).sort((a, b) => b - a);
+    sortedYears.forEach(year => {
+      const yearSection = createYearSection(dateData[year], year, color);
+      content.appendChild(yearSection);
+    });
+
+    return section;
+  }
+
+  /**
+   * 創建統計區段基礎結構 - 單一職責：區段框架
+   * @param {string} title - 區段標題
+   * @param {string} color - 主題顏色
+   * @returns {HTMLElement} 區段DOM元素
+   */
+  function createStatsSection(title, color) {
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f9fa;';
-    
+
     const header = document.createElement('div');
     header.style.cssText = `background: ${color}; color: white; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 7px 7px 0 0; cursor: pointer;`;
-    header.innerHTML = `${title} <span style="float: right;">▶</span>`;
-    
+    header.innerHTML = `${title} <span class="section-toggle">▶</span>`;
+
     const content = document.createElement('div');
+    content.className = 'stats-content';
     content.style.cssText = 'padding: 15px; display: none;';
-    
-    // 點擊標題展開/收合整個區塊
+
+    // 區段展開/收合邏輯
     header.onclick = () => {
       const isHidden = content.style.display === 'none';
       content.style.display = isHidden ? 'block' : 'none';
-      header.querySelector('span').textContent = isHidden ? '▼' : '▶';
+      header.querySelector('.section-toggle').textContent = isHidden ? '▼' : '▶';
     };
-
-    // 按年份排序（新的在前）
-    const sortedYears = Object.keys(dateData).sort((a, b) => b - a);
-    
-    sortedYears.forEach(year => {
-      const yearData = dateData[year];
-      const yearDiv = document.createElement('div');
-      yearDiv.style.cssText = 'margin-bottom: 15px; border-left: 3px solid #ddd; padding-left: 10px;';
-      
-      // 計算年度總計
-      let yearTotal = 0;
-      Object.keys(yearData).forEach(month => {
-        Object.keys(yearData[month]).forEach(day => {
-          yearTotal += yearData[month][day].length;
-        });
-      });
-      
-      const yearHeader = document.createElement('div');
-      yearHeader.style.cssText = 'font-weight: bold; font-size: 14px; color: #333; cursor: pointer; padding: 5px 0; user-select: none;';
-      yearHeader.innerHTML = `<span class="toggle">▶</span> ${year}年: ${yearTotal}筆`;
-      
-      const yearContent = document.createElement('div');
-      yearContent.style.cssText = 'margin-left: 15px; display: none;';
-      
-      // 年份展開/收合
-      yearHeader.onclick = (e) => {
-        e.stopPropagation();
-        const isHidden = yearContent.style.display === 'none';
-        yearContent.style.display = isHidden ? 'block' : 'none';
-        yearHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
-      };
-      
-      // 按月份排序（新的在前）
-      const sortedMonths = Object.keys(yearData).sort((a, b) => b.localeCompare(a));
-      
-      sortedMonths.forEach(month => {
-        const monthData = yearData[month];
-        const monthDiv = document.createElement('div');
-        monthDiv.style.cssText = 'margin-bottom: 10px; border-left: 2px solid #ccc; padding-left: 10px;';
-        
-        // 計算月度總計
-        let monthTotal = 0;
-        Object.keys(monthData).forEach(day => {
-          monthTotal += monthData[day].length;
-        });
-        
-        const monthHeader = document.createElement('div');
-        monthHeader.style.cssText = 'font-weight: 600; font-size: 13px; color: #555; cursor: pointer; padding: 3px 0; user-select: none;';
-        monthHeader.innerHTML = `<span class="toggle">▶</span> ${month}: ${monthTotal}筆`;
-        
-        const monthContent = document.createElement('div');
-        monthContent.style.cssText = 'margin-left: 15px; display: none;';
-        
-        // 月份展開/收合
-        monthHeader.onclick = (e) => {
-          e.stopPropagation();
-          const isHidden = monthContent.style.display === 'none';
-          monthContent.style.display = isHidden ? 'block' : 'none';
-          monthHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
-        };
-        
-        // 按日期排序（新的在前）
-        const sortedDays = Object.keys(monthData).sort((a, b) => b.localeCompare(a));
-        
-        sortedDays.forEach(day => {
-          const dayItems = monthData[day];
-          const dayDiv = document.createElement('div');
-          dayDiv.style.cssText = 'margin-bottom: 8px; padding-left: 10px;';
-          
-          const dayHeader = document.createElement('div');
-          dayHeader.style.cssText = 'font-size: 12px; color: #666; cursor: pointer; padding: 2px 0; user-select: none;';
-          dayHeader.innerHTML = `<span class="toggle">▶</span> ${day}: ${dayItems.length}筆`;
-          
-          const dayContent = document.createElement('div');
-          dayContent.style.cssText = 'margin-left: 15px; display: none; max-height: 200px; overflow-y: auto;';
-          
-          // 日期展開/收合並顯示商品列表
-          dayHeader.onclick = (e) => {
-            e.stopPropagation();
-            const isHidden = dayContent.style.display === 'none';
-            if (isHidden && dayContent.innerHTML === '') {
-              // 首次展開時才載入商品列表，按 AutoID 降序排列
-              const sortedItems = dayItems.sort((a, b) => b.AutoID - a.AutoID);
-              sortedItems.forEach(item => {
-                const itemDiv = document.createElement('div');
-                itemDiv.style.cssText = 'font-size: 13px; color: #333; padding: 6px 10px; margin: 3px 0; background: #fff; border-radius: 4px; border-left: 3px solid ' + color + '; line-height: 1.2; font-family: monospace;';
-                
-                // 建立一行顯示的結構化內容
-                const itemContainer = document.createElement('div');
-                itemContainer.style.cssText = 'display: flex; align-items: center; gap: 12px;';
-                
-                // ID 欄位 (8字元)
-                const idPart = document.createElement('span');
-                idPart.style.cssText = 'min-width: 70px; font-weight: 600; color: #007baf;';
-                idPart.textContent = `ID:${item.AutoID}`;
-                
-                // 商品名稱 (不截斷)
-                const namePart = document.createElement('span');
-                namePart.style.cssText = 'flex: 1; font-weight: 500; word-wrap: break-word;';
-                namePart.textContent = item.Name;
-                
-                // 狀態欄位 (8字元)
-                const statusPart = document.createElement('span');
-                const payStatus = item.IsPay ? '已付' : '未付';
-                const getStatus = item.IsGet ? '已取' : '未取';
-                const statusText = `${payStatus}/${getStatus}`;
-                
-                // 根據狀態設定顏色
-                let statusColor = '#6c757d'; // 預設灰色
-                if (item.IsPay && item.IsGet) {
-                  statusColor = '#28a745'; // 綠色 - 完成
-                } else if (item.IsPay && !item.IsGet) {
-                  statusColor = '#ffc107'; // 橙色 - 待取貨
-                } else if (!item.IsPay && item.IsGet) {
-                  statusColor = '#dc3545'; // 紅色 - 異常
-                }
-                
-                statusPart.style.cssText = `min-width: 80px; color: ${statusColor}; font-weight: 600; text-align: center;`;
-                statusPart.textContent = statusText;
-                
-                // 競標資訊 (不截斷暱稱和ID)
-                const bidPart = document.createElement('span');
-                bidPart.style.cssText = 'min-width: 200px; font-size: 12px; white-space: nowrap;';
-                
-                if (item.HasBids && item.BidPrice && item.Bidder) {
-                  // 同時顯示暱稱和得標者ID，完整顯示不截斷
-                  let displayName = '';
-                  
-                  if (item.NickName && item.Bidder) {
-                    // 有暱稱時顯示：暱稱(ID)
-                    displayName = `${item.NickName}(${item.Bidder})`;
-                  } else if (item.NickName) {
-                    // 只有暱稱時
-                    displayName = item.NickName;
-                  } else {
-                    // 只有得標者ID時
-                    displayName = item.Bidder;
-                  }
-                  
-                  bidPart.innerHTML = `<span style="color: #0056b3; font-weight: 600;">${item.BidPrice}元</span><span style="color: #666;"> / ${displayName}</span>`;
-                  itemDiv.style.cssText += ' background: #f8f9ff;';
-                } else if (item.HasBids === false) {
-                  bidPart.style.cssText += ' color: #856404;';
-                  bidPart.textContent = '無競標';
-                } else {
-                  bidPart.style.cssText += ' color: #6c757d;';
-                  bidPart.textContent = '查詢中...';
-                  itemDiv.style.cssText += ' background: #f8f9fa;';
-                }
-                
-                // 組裝所有部分
-                itemContainer.appendChild(idPart);
-                itemContainer.appendChild(namePart);
-                itemContainer.appendChild(statusPart);
-                itemContainer.appendChild(bidPart);
-                
-                itemDiv.appendChild(itemContainer);
-                
-                // 根據付款和取貨狀態調整樣式
-                if (item.IsPay && item.IsGet) {
-                  // 已付款且已取貨 - 完成狀態，使用綠色調
-                  itemDiv.style.cssText += ' border-left-color: #28a745;';
-                } else if (item.IsPay && !item.IsGet) {
-                  // 已付款但未取貨 - 使用橙色調
-                  itemDiv.style.cssText += ' border-left-color: #ffc107;';
-                } else if (!item.IsPay && item.IsGet) {
-                  // 未付款但已取貨 - 異常狀態，使用紅色調
-                  itemDiv.style.cssText += ' border-left-color: #dc3545;';
-                }
-                
-                dayContent.appendChild(itemDiv);
-              });
-            }
-            dayContent.style.display = isHidden ? 'block' : 'none';
-            dayHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
-          };
-          
-          dayDiv.appendChild(dayHeader);
-          dayDiv.appendChild(dayContent);
-          monthContent.appendChild(dayDiv);
-        });
-        
-        monthDiv.appendChild(monthHeader);
-        monthDiv.appendChild(monthContent);
-        yearContent.appendChild(monthDiv);
-      });
-      
-      yearDiv.appendChild(yearHeader);
-      yearDiv.appendChild(yearContent);
-      content.appendChild(yearDiv);
-    });
 
     section.appendChild(header);
     section.appendChild(content);
     return section;
+  }
+
+  /**
+   * 創建年份區塊 - 單一職責：年份層級處理
+   * @param {Object} yearData - 年份資料
+   * @param {string} year - 年份
+   * @param {string} color - 主題顏色
+   * @returns {HTMLElement} 年份DOM元素
+   */
+  function createYearSection(yearData, year, color) {
+    const yearDiv = document.createElement('div');
+    yearDiv.style.cssText = 'margin-bottom: 15px; border-left: 3px solid #ddd; padding-left: 10px;';
+
+    // 計算年度總計 - 使用輔助函數
+    const yearTotal = calculateYearTotal(yearData);
+
+    const yearHeader = document.createElement('div');
+    yearHeader.style.cssText = 'font-weight: bold; font-size: 14px; color: #333; cursor: pointer; padding: 5px 0; user-select: none;';
+    yearHeader.innerHTML = `<span class="toggle">▶</span> ${year}年: ${yearTotal}筆`;
+
+    const yearContent = document.createElement('div');
+    yearContent.style.cssText = 'margin-left: 15px; display: none;';
+
+    // 年份展開/收合
+    yearHeader.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = yearContent.style.display === 'none';
+      yearContent.style.display = isHidden ? 'block' : 'none';
+      yearHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
+    };
+
+    // 按月份排序並處理
+    const sortedMonths = Object.keys(yearData).sort((a, b) => b.localeCompare(a));
+    sortedMonths.forEach(month => {
+      const monthSection = createMonthSection(yearData[month], month, color);
+      yearContent.appendChild(monthSection);
+    });
+
+    yearDiv.appendChild(yearHeader);
+    yearDiv.appendChild(yearContent);
+    return yearDiv;
+  }
+
+  /**
+   * 計算年度總計 - 單一職責：統計計算
+   * @param {Object} yearData - 年份資料
+   * @returns {number} 年度總計
+   */
+  function calculateYearTotal(yearData) {
+    let total = 0;
+    Object.keys(yearData).forEach(month => {
+      Object.keys(yearData[month]).forEach(day => {
+        total += yearData[month][day].length;
+      });
+    });
+    return total;
+  }
+
+  /**
+   * 創建月份區塊 - 單一職責：月份層級處理
+   * @param {Object} monthData - 月份資料
+   * @param {string} month - 月份
+   * @param {string} color - 主題顏色
+   * @returns {HTMLElement} 月份DOM元素
+   */
+  function createMonthSection(monthData, month, color) {
+    const monthDiv = document.createElement('div');
+    monthDiv.style.cssText = 'margin-bottom: 10px; border-left: 2px solid #ccc; padding-left: 10px;';
+
+    // 計算月度總計
+    const monthTotal = Object.keys(monthData).reduce((total, day) => total + monthData[day].length, 0);
+
+    const monthHeader = document.createElement('div');
+    monthHeader.style.cssText = 'font-weight: 600; font-size: 13px; color: #555; cursor: pointer; padding: 3px 0; user-select: none;';
+    monthHeader.innerHTML = `<span class="toggle">▶</span> ${month}: ${monthTotal}筆`;
+
+    const monthContent = document.createElement('div');
+    monthContent.style.cssText = 'margin-left: 15px; display: none;';
+
+    // 月份展開/收合
+    monthHeader.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = monthContent.style.display === 'none';
+      monthContent.style.display = isHidden ? 'block' : 'none';
+      monthHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
+    };
+
+    // 按日期排序並處理
+    const sortedDays = Object.keys(monthData).sort((a, b) => b.localeCompare(a));
+    sortedDays.forEach(day => {
+      const daySection = createDaySection(monthData[day], day, color);
+      monthContent.appendChild(daySection);
+    });
+
+    monthDiv.appendChild(monthHeader);
+    monthDiv.appendChild(monthContent);
+    return monthDiv;
+  }
+
+  /**
+   * 創建日期區塊 - 單一職責：日期層級處理
+   * @param {Array} dayItems - 當日商品列表
+   * @param {string} day - 日期
+   * @param {string} color - 主題顏色
+   * @returns {HTMLElement} 日期DOM元素
+   */
+  function createDaySection(dayItems, day, color) {
+    const dayDiv = document.createElement('div');
+    dayDiv.style.cssText = 'margin-bottom: 8px; padding-left: 10px;';
+
+    const dayHeader = document.createElement('div');
+    dayHeader.style.cssText = 'font-size: 12px; color: #666; cursor: pointer; padding: 2px 0; user-select: none;';
+    dayHeader.innerHTML = `<span class="toggle">▶</span> ${day}: ${dayItems.length}筆`;
+
+    const dayContent = document.createElement('div');
+    dayContent.style.cssText = 'margin-left: 15px; display: none; max-height: 200px; overflow-y: auto;';
+
+    // 日期展開/收合並顯示商品列表
+    dayHeader.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = dayContent.style.display === 'none';
+      if (isHidden && dayContent.innerHTML === '') {
+        // 首次展開時載入商品列表
+        const sortedItems = dayItems.sort((a, b) => b.AutoID - a.AutoID);
+        sortedItems.forEach(item => {
+          const itemElement = formatItemDisplay(item, color);
+          dayContent.appendChild(itemElement);
+        });
+      }
+      dayContent.style.display = isHidden ? 'block' : 'none';
+      dayHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
+    };
+
+    dayDiv.appendChild(dayHeader);
+    dayDiv.appendChild(dayContent);
+    return dayDiv;
+  }
+
+  /**
+   * 格式化商品顯示 - 單一職責：商品項目渲染
+   * @param {Object} item - 商品物件
+   * @param {string} color - 主題顏色
+   * @returns {HTMLElement} 商品DOM元素
+   */
+  function formatItemDisplay(item, color) {
+    const itemDiv = document.createElement('div');
+    itemDiv.style.cssText = 'font-size: 13px; color: #333; padding: 6px 10px; margin: 3px 0; background: #fff; border-radius: 4px; border-left: 3px solid ' + color + '; line-height: 1.2; font-family: monospace;';
+
+    // 建立一行顯示的結構化內容
+    const itemContainer = document.createElement('div');
+    itemContainer.style.cssText = 'display: flex; align-items: center; gap: 12px;';
+
+    // ID 欄位
+    const idPart = document.createElement('span');
+    idPart.style.cssText = 'min-width: 70px; font-weight: 600; color: #007baf;';
+    idPart.textContent = `ID:${item.AutoID}`;
+
+    // 商品名稱
+    const namePart = document.createElement('span');
+    namePart.style.cssText = 'flex: 1; font-weight: 500; word-wrap: break-word;';
+    namePart.textContent = item.Name;
+
+    // 狀態欄位 - 使用統一狀態系統
+    const statusPart = document.createElement('span');
+    statusPart.style.cssText = 'min-width: 80px; font-weight: 600; text-align: center;';
+    statusPart.innerHTML = ITEM_STATUS_SYSTEM.generateStatusHTML(item.IsPay, item.IsGet);
+
+    // 競標資訊 - 使用統一競標狀態機
+    const bidPart = document.createElement('span');
+    bidPart.style.cssText = 'min-width: 200px; font-size: 12px; white-space: nowrap;';
+    bidPart.innerHTML = BID_STATUS_SYSTEM.generateBidDisplay(item, 'inline');
+
+    // 應用容器背景樣式
+    BID_STATUS_SYSTEM.applyContainerStyle(itemDiv, item);
+
+    // 組裝所有部分
+    itemContainer.appendChild(idPart);
+    itemContainer.appendChild(namePart);
+    itemContainer.appendChild(statusPart);
+    itemContainer.appendChild(bidPart);
+
+    itemDiv.appendChild(itemContainer);
+
+    // 使用統一狀態系統應用樣式
+    ITEM_STATUS_SYSTEM.applyStatusStyle(itemDiv, item.IsPay, item.IsGet);
+
+    return itemDiv;
   }
 
   // 生成季報摘要視圖
@@ -700,14 +1393,11 @@
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'photo-preview-modal';
-      Object.assign(modal.style, COMMON_STYLES.modal);
-      modal.style.top = '10%';
-      modal.style.border = '2px solid #007baf';
-      modal.style.zIndex = '10000';
-      modal.style.minWidth = '600px';
-      modal.style.maxWidth = '90vw';
+
+      // 使用變體系統：圖片預覽模態框變體
+      modal.style.cssText = applyComponentVariant('modal', 'photo');
       modal.innerHTML = `
-        <span style="${COMMON_STYLES.closeButton} color:#666;"
+        <span style="${UI_COMPONENTS.closeButton.base}color:#666;"
               onclick="this.parentNode.style.display='none'">X</span>
         <h3 style="margin-top:0; margin-bottom:20px; color:#007baf; font-size:20px;">圖片預覽</h3>
         <div id="photo-preview-container" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;"></div>
@@ -762,212 +1452,173 @@
     modal.style.display = 'block';
   }
 
-  function buildPanel(data = []) {
+  /**
+   * 取得競標狀態HTML - 重構為使用統一狀態機
+   * @param {Object} item - 商品物件
+   * @returns {string} 競標狀態HTML
+   */
+  function getBidStatusHTML(item) {
+    // 使用統一競標狀態機，零條件分支
+    return BID_STATUS_SYSTEM.generateBidDisplay(item, 'block');
+  }
 
+  function buildPanel(data = []) {
     const panelId = 'furniture-panel';
-    const panel = document.getElementById(panelId);
-    if (panel) panel.remove(); // 確保舊面板移除
+    const existingPanel = document.getElementById(panelId);
+    if (existingPanel) existingPanel.remove(); // 確保舊面板移除
 
     const newPanel = document.createElement('div');
     newPanel.id = panelId;
-    newPanel.style.cssText = COMMON_STYLES.panel;
-    newPanel.innerHTML = `
-      <h2 style="${COMMON_STYLES.panelHeader}">
-        <span>匯出家具資料</span>
-        <button id="close-panel" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer;">X</button>
-      </h2>
-      <input type="text" id="panel-search" placeholder="輸入 AutoID 搜尋" style="${COMMON_STYLES.searchInput}">
-    `;
+    // 使用變體系統：預設面板變體
+    newPanel.style.cssText = applyComponentVariant('panel', 'default');
 
+    // --- 建立靜態頭部 ---
+    const header = document.createElement('h2');
+    header.style.cssText = UI_COMPONENTS.panel.header;
+
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = '匯出家具資料';
+
+    const closeButton = document.createElement('button');
+    closeButton.id = 'close-panel';
+    closeButton.textContent = 'X';
+    closeButton.style.cssText = 'background: none; border: none; color: white; font-size: 16px; cursor: pointer;';
+    closeButton.onclick = () => newPanel.remove();
+
+    header.appendChild(titleSpan);
+    header.appendChild(closeButton);
+    newPanel.appendChild(header);
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'panel-search';
+    searchInput.placeholder = '輸入 AutoID 搜尋';
+    searchInput.style.cssText = UI_COMPONENTS.input.search;
+    searchInput.onkeyup = (e) => {
+      const inputValue = e.target.value.trim();
+      const items = newPanel.querySelectorAll('[data-autoid]');
+      if (!inputValue) {
+        items.forEach(item => { item.style.background = ''; });
+        return;
+      }
+      const targetItem = newPanel.querySelector(`[data-autoid="${inputValue}"]`);
+      items.forEach(item => { item.style.background = ''; });
+      if (targetItem) {
+        safeScrollIntoView(targetItem, { behavior: 'smooth', block: 'center' });
+        targetItem.style.background = '#e6f3ff';
+        setTimeout(() => { if(targetItem) targetItem.style.background = ''; }, APP_CONSTANTS.TIMING.HIGHLIGHT_RESET_DELAY);
+      }
+    };
+    newPanel.appendChild(searchInput);
+
+    // --- 動態建立資料列表 ---
     data.sort((a, b) => b.AutoID - a.AutoID);
     data.forEach((item, i) => {
       const div = document.createElement('div');
-      div.dataset.autoid = item.AutoID; // 新增 data-autoid 屬性
-      // 根據索引設定明顯的色差
-      const backgroundColor = i % 2 === 0 ? '#ffffff' : '#f0f2f5';
-      div.style = `padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; background-color: ${backgroundColor};`;
-      div.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>
-            <span class="photo-preview-icon" style="cursor: pointer;">[IMG]</span>
-            <strong>${item.Name || '未命名'}</strong>
-          </span>
-          <div style="display: flex; gap: 5px;">
-            <button class="package-download-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonBlue}" data-index="${i}">PACK</button>
-            <button class="download-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonGreen}" data-index="${i}">DL</button>
-          </div>
-        </div>
-        <div style="color: #666; font-size: 13px; margin-top: 4px;">
-          ID: ${item.AutoID} | 日期: ${(item.CreateDate || '').split('T')[0]}
-          ${item.BidChecked ? 
-            (item.HasBids ? 
-              `<br><span style="background-color: #ffebee; padding: 2px 4px; border-radius: 3px;">最高競標價: ${item.BidPrice} 元<br>最高出價者: ${item.Bidder}</span>` : 
-              '<br>無競標資料'
-            ) : 
-            '<br>競標資料讀取中...'
-          }
-        </div>
-      `;
-      // 使用 setTimeout 將事件綁定推遲到下一個事件循環
-      // 以確保 innerHTML 創建的元素已經被 DOM 解析和渲染
-      setTimeout(() => {
-        const photoIcon = div.querySelector('.photo-preview-icon');
-        if (photoIcon) {
-          photoIcon.addEventListener('click', () => showPhotoPreview(item.Photos));
-        }
+      div.dataset.autoid = item.AutoID;
+      div.style = `padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; background-color: ${i % 2 === 0 ? '#ffffff' : '#f0f2f5'};`;
 
-        const downloadBtn = div.querySelector('.download-btn');
-        if (downloadBtn) {
-          downloadBtn.onclick = () => {
-            const { Photos, ...restOfItem } = item;
-            const dataToExport = restOfItem;
-            
-            const name = item.Name || `item_${item.AutoID}`;
-            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${name}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+      const topRow = document.createElement('div');
+      topRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
 
-            const base = location.origin;
-            (Photos || []).forEach((p, j) => {
-              const imgA = document.createElement('a');
-              imgA.href = p.Photo.startsWith('http') ? p.Photo : base + p.Photo;
-              imgA.download = `${name}_${j + 1}.jpg`;
-              imgA.click();
-            });
-          };
-        }
+      const nameContainer = document.createElement('span');
+      const photoIcon = document.createElement('span');
+      photoIcon.className = 'photo-preview-icon';
+      photoIcon.style.cursor = 'pointer';
+      photoIcon.textContent = '[IMG]';
+      photoIcon.onclick = () => showPhotoPreview(item.Photos);
 
-        
-        const packageBtn = div.querySelector('.package-download-btn');
-        if (packageBtn) {
-          packageBtn.onclick = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const {
-              AutoID, Name, CategoryName, CategoryID, DistName, CreateDate, Description,
-              Length, Width, Height, DeliveryAddress, InitPrice, OriginPrice, Photos
-            } = item;
-            
-            // 顯示載入提示
-            const btn = div.querySelector('.package-download-btn');
-            const originalText = btn.textContent;
-            btn.textContent = '處理中...';
-            btn.disabled = true;
-            btn.style.background = '#6c757d';
-            
-            try {
-              // PACK功能：將圖片轉 Base64 打包在 JSON 內
-              const photosWithBase64 = [];
-              if (Photos && Array.isArray(Photos) && Photos.length > 0) {
-                for (let j = 0; j < Photos.length; j++) {
-                  const photo = Photos[j];
-                  const photoUrl = photo.Photo.startsWith('http') ? photo.Photo : location.origin + photo.Photo;
-                  
-                  try {
-                    const base64 = await convertImageToBase64(photoUrl);
-                    photosWithBase64.push({
-                      ...photo,
-                      Photo: base64,
-                      PhotoUrl: photoUrl // 保留原始URL作為參考
-                    });
-                  } catch (error) {
-                    console.error(`轉換圖片 ${j + 1} 失敗:`, error);
-                    // 如果轉換失敗，保留原始資料
-                    photosWithBase64.push({
-                      ...photo,
-                      PhotoUrl: photoUrl,
-                      Error: '圖片轉換失敗'
-                    });
-                  }
-                }
+      const nameStrong = document.createElement('strong');
+      nameStrong.textContent = ` ${item.Name || '未命名'}`;
+
+      nameContainer.appendChild(photoIcon);
+      nameContainer.appendChild(nameStrong);
+
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display: flex; gap: 5px;';
+
+      const packageBtn = document.createElement('button');
+      packageBtn.className = 'package-download-btn';
+      // 使用變體系統：預設按鈕 + 主要主題
+      packageBtn.style.cssText = applyComponentVariant('button', 'default', 'primary');
+      packageBtn.dataset.index = i;
+      packageBtn.textContent = 'PACK';
+      packageBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const { Photos, ...restOfItem } = item;
+        packageBtn.textContent = '處理中...';
+        packageBtn.disabled = true;
+        packageBtn.style.background = '#6c757d';
+        try {
+          const photosWithBase64 = [];
+          if (Photos && Array.isArray(Photos) && Photos.length > 0) {
+            for (const photo of Photos) {
+              const photoUrl = photo.Photo.startsWith('http') ? photo.Photo : location.origin + photo.Photo;
+              try {
+                const base64 = await convertImageToBase64(photoUrl);
+                photosWithBase64.push({ ...photo, Photo: base64, PhotoUrl: photoUrl });
+              } catch (error) {
+                photosWithBase64.push({ ...photo, PhotoUrl: photoUrl, Error: '圖片轉換失敗' });
               }
-              
-              // 建立包含 Base64 圖片的完整資料
-              const dataToExport = {
-                AutoID,
-                Name,
-                CategoryName,
-                CategoryID,
-                DistName,
-                CreateDate,
-                Description,
-                Length,
-                Width,
-                Height,
-                DeliveryAddress,
-                InitPrice,
-                OriginPrice,
-                Photos: photosWithBase64,
-                ExportInfo: {
-                  ExportDate: new Date().toISOString(),
-                  ExportType: 'PackageDownload',
-                  ImageFormat: 'Base64',
-                  TotalImages: photosWithBase64.length
-                }
-              };
-              
-              // 下載 JSON 檔案
-              const name = Name || `item_${AutoID}`;
-              const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `${name}_package.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-              
-              console.log(`打包下載完成: ${name} (${photosWithBase64.length} 張圖片)`);
-              
-            } catch (error) {
-              console.error('打包下載失敗:', error);
-              alert('打包下載失敗，請稍後再試');
-            } finally {
-              // 恢復按鈕狀態
-              btn.textContent = originalText;
-              btn.disabled = false;
-              btn.style.background = '#28a745';
             }
-          };
+          }
+          const dataToExport = { ...restOfItem, Photos: photosWithBase64, ExportInfo: { ExportDate: new Date().toISOString(), ExportType: 'PackageDownload' } };
+          const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${item.Name || `item_${item.AutoID}`}_package.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          ERROR_HANDLER.handle(error, 'file-processing', { fallbackMessage: '打包下載失敗，請稍後再試' });
+        } finally {
+          packageBtn.textContent = 'PACK';
+          packageBtn.disabled = false;
+          packageBtn.style.background = '#007baf';
         }
-      }, 0);
-      
+      };
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'download-btn';
+      // 使用變體系統：預設按鈕 + 成功主題
+      downloadBtn.style.cssText = applyComponentVariant('button', 'default', 'success');
+      downloadBtn.dataset.index = i;
+      downloadBtn.textContent = 'DL';
+      downloadBtn.onclick = () => {
+        const { Photos, ...restOfItem } = item;
+        const blob = new Blob([JSON.stringify(restOfItem, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${item.Name || `item_${item.AutoID}`}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        (Photos || []).forEach((p, j) => {
+          const imgA = document.createElement('a');
+          imgA.href = p.Photo.startsWith('http') ? p.Photo : location.origin + p.Photo;
+          imgA.download = `${item.Name || `item_${item.AutoID}`}_${j + 1}.jpg`;
+          imgA.click();
+        });
+      };
+
+      buttonContainer.appendChild(packageBtn);
+      buttonContainer.appendChild(downloadBtn);
+
+      topRow.appendChild(nameContainer);
+      topRow.appendChild(buttonContainer);
+
+      const bottomRow = document.createElement('div');
+      bottomRow.style.cssText = 'color: #666; font-size: 13px; margin-top: 4px;';
+      bottomRow.innerHTML = `ID: ${item.AutoID} | 日期: ${(item.CreateDate || '').split('T')[0]} ${getBidStatusHTML(item)}`;
+
+      div.appendChild(topRow);
+      div.appendChild(bottomRow);
       newPanel.appendChild(div);
     });
 
     document.body.appendChild(newPanel);
-    document.getElementById('close-panel').onclick = () => {
-      newPanel.remove(); // 銷毀面板
-    };
-
-    // 搜尋功能
-    document.getElementById('panel-search').onkeyup = (e) => {
-      const inputValue = e.target.value.trim();
-      if (!inputValue) {
-        // 清除高亮
-        newPanel.querySelectorAll('[data-autoid]').forEach(item => {
-          item.style.background = '';
-        });
-        return;
-      }
-      const item = newPanel.querySelector(`[data-autoid="${inputValue}"]`);
-      if (item) {
-        // 清除其他高亮
-        newPanel.querySelectorAll('[data-autoid]').forEach(other => {
-          if (other !== item) other.style.background = '';
-        });
-        // 滾動並高亮（使用安全的滾動函數）
-        safeScrollIntoView(item, { behavior: 'smooth', block: 'center' });
-        item.style.background = '#e6f3ff';
-        setTimeout(() => item.style.background = '', 2000); // 2 秒後移除高亮
-      } else {
-        console.log('無匹配 AutoID:', inputValue);
-      }
-    };
   }
 
   function insertButtons() {
@@ -979,68 +1630,7 @@
       return;
     }
 
-    addBtn.onclick = () => {
-      setTimeout(() => {
-        const modal = document.querySelector('.vxe-modal--box');
-        if (!modal) {
-          console.log('未找到 vxe-modal--box');
-          return;
-        }
-
-        const header = modal.querySelector('.vxe-modal--header');
-        const title = header && header.querySelector('.vxe-modal--title');
-        if (!header || !title || title.textContent !== '編輯視窗') {
-          console.log('未找到 header 或標題不是「編輯視窗」', { header, title: title?.textContent });
-          return;
-        }
-
-        setTimeout(() => {
-          const modal = document.querySelector('.vxe-modal--box');
-          if (!modal) {
-            console.log('未找到 vxe-modal--box');
-            return;
-          }
-
-          const header = modal.querySelector('.vxe-modal--header');
-          if (!header || header.querySelector('#import-json-btn')) {
-            console.log('未找到 header 或按鈕已存在');
-            return;
-          }
-
-          // 插入載入表單按鈕
-          const importButton = document.createElement('button');
-          importButton.type = 'button';
-          importButton.id = 'import-json-btn';
-          importButton.innerHTML = '📝 載入表單';
-          importButton.className = 'el-button el-button--warning el-button--small';
-          importButton.style.marginLeft = '10px';
-          importButton.onclick = () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (e) => {
-              const file = e.target.files[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  try {
-                    const json = JSON.parse(e.target.result);
-                    fillForm(json);
-                  } catch (error) {
-                    alert('JSON 解析失敗: ' + error.message);
-                  }
-                };
-                reader.readAsText(file);
-              }
-            };
-            input.click();
-          };
-          
-          header.appendChild(importButton);
-          console.log('📝 載入表單按鈕已插入到編輯視窗 header');
-        }, 1000);
-      }, 1000);
-    };
+    addBtn.onclick = null; // 載入表單功能已廢棄
 
     const statsBtn = document.createElement('button');
     statsBtn.type = 'button';
@@ -1049,68 +1639,34 @@
     statsBtn.className = 'el-button el-button--primary el-button--small';
     statsBtn.style.marginLeft = '5px';
     statsBtn.onclick = (e) => {
-      // 防止事件冒泡和預設行為
       e.preventDefault();
       e.stopPropagation();
-
-      // 設定標記：這是統計按鈕主動觸發的查詢
-      window.__statsButtonTriggered = true;
-
-      const queryBtn = Array.from(document.querySelectorAll('button.el-button'))
-        .find(b => /查\s*詢/.test(b.textContent));
+      FurnitureHelper.setStatsTriggered(true);
+      const queryBtn = Array.from(document.querySelectorAll('button.el-button')).find(b => /查\s*詢/.test(b.textContent));
       if (!queryBtn) {
         console.error('查詢按鈕未找到');
         alert('查詢按鈕未找到，請確認頁面已載入');
-        window.__statsButtonTriggered = false;
+        FurnitureHelper.setStatsTriggered(false);
         return;
       }
-
-      // 使用更安全的方式觸發查詢按鈕
       try {
-        // 先嘗試直接觸發 Vue 事件
         if (queryBtn.__vue__ && queryBtn.__vue__.$emit) {
           queryBtn.__vue__.$emit('click');
         } else {
-          // 關鍵修復：禁用事件冒泡，避免干擾其他事件處理
-          const clickEvent = new MouseEvent('click', {
-            bubbles: false,  // 修復：設為 false 避免事件污染
-            cancelable: true,
-            view: window
-          });
+          const clickEvent = new MouseEvent('click', { bubbles: false, cancelable: true, view: window });
           queryBtn.dispatchEvent(clickEvent);
         }
-
-        // 延遲發送統計請求，並清除標記
         setTimeout(() => {
           window.postMessage({ source: 'run-vue-stats' }, window.location.origin);
-          window.__statsButtonTriggered = false; // 清除標記
+          FurnitureHelper.setStatsTriggered(false);
         }, 1000);
       } catch (error) {
         console.error('觸發查詢按鈕時發生錯誤:', error);
-        // 如果觸發查詢按鈕失敗，直接嘗試獲取統計數據
         setTimeout(() => {
           window.postMessage({ source: 'run-vue-stats' }, window.location.origin);
-          window.__statsButtonTriggered = false; // 清除標記
+          FurnitureHelper.setStatsTriggered(false);
         }, 500);
       }
-    };
-
-    const exportBtn = document.createElement('button');
-    exportBtn.type = 'button';
-    exportBtn.textContent = '匯出';
-    exportBtn.className = 'el-button el-button--warning el-button--small';
-    exportBtn.style.marginLeft = '5px';
-    exportBtn.onclick = () => {
-      window.postMessage({ source: 'run-vue-export' }, window.location.origin);
-    };
-
-    const exportAllBtn = document.createElement('button');
-    exportAllBtn.type = 'button';
-    exportAllBtn.textContent = '全部匯出';
-    exportAllBtn.className = 'el-button el-button--warning el-button--small';
-    exportAllBtn.style.marginLeft = '5px';
-    exportAllBtn.onclick = () => {
-      window.postMessage({ source: 'run-vue-export-all' }, window.location.origin);
     };
 
     const panelBtn = document.createElement('button');
@@ -1121,7 +1677,7 @@
     panelBtn.onclick = () => {
       const panel = document.getElementById('furniture-panel');
       if (panel) {
-        panel.remove(); // 銷毀面板
+        panel.remove();
       } else {
         window.postMessage({ source: 'run-vue-panel' }, window.location.origin);
       }
@@ -1136,7 +1692,6 @@
       window.postMessage({ source: 'run-vue-print' }, window.location.origin);
     };
 
-    // 新增直接匯入按鈕
     const quickImportBtn = document.createElement('button');
     quickImportBtn.type = 'button';
     quickImportBtn.textContent = '直接匯入';
@@ -1146,73 +1701,38 @@
     quickImportBtn.onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
-              console.log('開始直接匯入流程...');
-      
-      // 建立檔案選擇器
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.json';
       input.style.display = 'none';
-      
       input.addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
-        
+        const processingMsg = document.createElement('div');
+        processingMsg.textContent = '正在處理資料，請稍候...';
+        processingMsg.style.cssText = UI_COMPONENTS.processing.base;
+        document.body.appendChild(processingMsg);
         try {
-          console.log(`選擇檔案: ${file.name}`);
-          
-          // 讀取 JSON 檔案
           const text = await file.text();
           const jsonData = JSON.parse(text);
-          
-          // 更新日期格式
           const now = new Date();
           const createDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-          const modifyDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14, 0, 0, 0, 0);
-          
-          // 格式化日期為 "YYYY-MM-DDTHH:mm:ss.SS" 格式
-          const formatDate = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}T00:00:00.00`;
-          };
-          
-          // 更新 JSON 資料中的日期（API 需要的格式）
+          const modifyDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + APP_CONSTANTS.BUSINESS.DEFAULT_AUCTION_DURATION_DAYS, 0, 0, 0, 0);
+          const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T00:00:00.00`;
           jsonData.StartDate = formatDate(createDate);
           jsonData.EndDate = formatDate(modifyDate);
-          
-          console.log('JSON 資料解析成功，開始處理...');
-          console.log(`📅 更新日期: StartDate=${jsonData.StartDate}, EndDate=${jsonData.EndDate}`);
-          
-          // 顯示處理中的提示
-          const processingMsg = document.createElement('div');
-          processingMsg.textContent = ' 正在處理資料，請稍候...';
-          processingMsg.style.cssText = COMMON_STYLES.processingMsg;
-          document.body.appendChild(processingMsg);
-          
-          try {
-            // 直接呼叫 API 送出
-            const result = await directSubmitToAPI(jsonData);
-            console.log('直接匯入完成！', result);
-            processingMsg.remove();
-          } catch (error) {
-            processingMsg.remove();
-            throw error;
-          }
+          await directSubmitToAPI(jsonData);
+          processingMsg.remove();
         } catch (error) {
-          console.error('直接匯入失敗:', error);
-          alert(` 直接匯入失敗: ${error.message}`);
+          processingMsg.remove();
+          ERROR_HANDLER.handle(error, 'file-processing', { fallbackMessage: '直接匯入失敗，請檢查檔案格式' });
         }
         document.body.removeChild(input);
       });
       document.body.appendChild(input);
       input.click();
     };
-    addBtn.parentNode.insertBefore(quickImportBtn, printBtn.nextSibling);
 
-    // 新增遠端匯入按鈕
     const remoteQuickImportBtn = document.createElement('button');
     remoteQuickImportBtn.type = 'button';
     remoteQuickImportBtn.textContent = '遠端匯入';
@@ -1220,9 +1740,7 @@
     remoteQuickImportBtn.style.marginLeft = '5px';
     remoteQuickImportBtn.title = '從遠端 files.php 獲取 JSON 清單並循序匯入';
     remoteQuickImportBtn.onclick = handleRemoteQuickImport;
-    addBtn.parentNode.insertBefore(remoteQuickImportBtn, quickImportBtn.nextSibling);
 
-    // 新增設定按鈕
     const settingsBtn = document.createElement('button');
     settingsBtn.type = 'button';
     settingsBtn.textContent = '設定';
@@ -1230,204 +1748,37 @@
     settingsBtn.style.marginLeft = '5px';
     settingsBtn.title = '設定 Webhook 網址';
     settingsBtn.onclick = showSettingsPanel;
-    addBtn.parentNode.insertBefore(settingsBtn, remoteQuickImportBtn.nextSibling);
 
-    // 遠端匯入功能
+    // --- 輔助函數定義 --- 
+
     const DEFAULT_WEBHOOK_URL = 'https://580.blias.com/daobo/files.php?format=json';
     
-    // 儲存設定到 localStorage
     function saveWebhookSetting(url) {
-      try {
-        localStorage.setItem('furniture-helper-webhook-url', url);
-        console.log('webhook 設定已儲存:', url);
-      } catch (error) {
-        console.error('儲存 webhook 設定失敗:', error);
-      }
+      try { localStorage.setItem('furniture-helper-webhook-url', url); } catch (e) { console.error('儲存設定失敗:', e); }
     }
     
-    // 從 localStorage 讀取設定
     function loadWebhookSetting() {
-      try {
-        const savedUrl = localStorage.getItem('furniture-helper-webhook-url');
-        return savedUrl || DEFAULT_WEBHOOK_URL;
-      } catch (error) {
-        console.error('讀取 webhook 設定失敗:', error);
-        return DEFAULT_WEBHOOK_URL;
-      }
+      try { return localStorage.getItem('furniture-helper-webhook-url') || DEFAULT_WEBHOOK_URL; } catch (e) { return DEFAULT_WEBHOOK_URL; }
     }
     
-    // 取得當前使用的 webhook 網址
     function getCurrentWebhookUrl() {
       return loadWebhookSetting();
     }
 
-    // 顯示設定面板
-    function showSettingsPanel() {
-      const panelId = 'settings-panel';
-      const existingPanel = document.getElementById(panelId);
-      if (existingPanel) {
-        existingPanel.remove();
-      }
-
-      const panel = document.createElement('div');
-      panel.id = panelId;
-      panel.style.cssText = COMMON_STYLES.panel;
-      panel.style.width = '400px';
-      panel.innerHTML = `
-        <h2 style="${COMMON_STYLES.panelHeader}">
-          <span>系統設定</span>
-          <button id="close-settings-panel" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer;">X</button>
-        </h2>
-        <div style="padding: 20px;">
-          <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
-              遠端匯入 Webhook 網址：
-            </label>
-            <input type="url" id="webhook-url-input" 
-                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;"
-                   placeholder="請輸入 Webhook 網址 (例如：https://your-domain.com/api/files.php?format=json)"
-                   value="${getCurrentWebhookUrl()}">
-            <div style="margin-top: 8px; font-size: 12px; color: #666;">
-              預設值：${DEFAULT_WEBHOOK_URL}
-            </div>
-          </div>
-          
-          <div style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="reset-webhook-btn" style="${COMMON_STYLES.button}" 
-                    style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
-              重置為預設值
-            </button>
-            <button id="save-webhook-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonBlue}" 
-                    style="background: #007baf; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
-              儲存設定
-            </button>
-          </div>
-          
-          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-            <button id="test-webhook-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonGreen}"
-                    style="background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-              測試連線
-            </button>
-          </div>
-
-          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-            <button id="open-files-page-btn" style="${COMMON_STYLES.button}"
-                    style="background: #6f42c1; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-              🔗 開啟 Files.php 頁面
-            </button>
-            <div style="margin-top: 8px; font-size: 12px; color: #666; text-align: center;">
-              在新分頁中開啟遠端檔案管理頁面
-            </div>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(panel);
-
-      // 綁定事件
-      document.getElementById('close-settings-panel').onclick = () => {
-        panel.remove();
-      };
-
-      document.getElementById('save-webhook-btn').onclick = () => {
-        const input = document.getElementById('webhook-url-input');
-        const url = input.value.trim();
-        
-        if (!url) {
-          showNotification('請輸入 Webhook 網址', 'warning');
-          return;
-        }
-        
-        if (!isValidUrl(url)) {
-          showNotification('請輸入有效的網址格式', 'error');
-          return;
-        }
-        
-        saveWebhookSetting(url);
-        showNotification('設定已儲存', 'success');
-      };
-
-      document.getElementById('reset-webhook-btn').onclick = () => {
-        document.getElementById('webhook-url-input').value = DEFAULT_WEBHOOK_URL;
-        saveWebhookSetting(DEFAULT_WEBHOOK_URL);
-        showNotification('已重置為預設值', 'success');
-      };
-
-      document.getElementById('test-webhook-btn').onclick = async () => {
-        const input = document.getElementById('webhook-url-input');
-        const url = input.value.trim();
-        
-        if (!url) {
-          showNotification('請先輸入 Webhook 網址', 'warning');
-          return;
-        }
-        
-        if (!isValidUrl(url)) {
-          showNotification('請輸入有效的網址格式', 'error');
-          return;
-        }
-        
-        await testWebhookConnection(url);
-      };
-
-      document.getElementById('open-files-page-btn').onclick = () => {
-        const input = document.getElementById('webhook-url-input');
-        const webhookUrl = input.value.trim();
-
-        if (!webhookUrl) {
-          showNotification('請先設定 Webhook 網址', 'warning');
-          return;
-        }
-
-        // 從 webhook 網址中移除查詢參數，保留完整路徑
-        try {
-          const url = new URL(webhookUrl);
-          // 移除查詢參數，保留完整路徑
-          const filesUrl = `${url.protocol}//${url.host}${url.pathname}`;
-
-          // 在新分頁中開啟 files.php
-          window.open(filesUrl, '_blank');
-          console.log(`開啟 Files.php 頁面: ${filesUrl}`);
-        } catch (error) {
-          console.error('解析 Webhook 網址失敗:', error);
-          showNotification('無效的 Webhook 網址格式', 'error');
-        }
-      };
-    }
-
-    // 驗證網址格式
     function isValidUrl(string) {
-      try {
-        new URL(string);
-        return true;
-      } catch (_) {
-        return false;
-      }
+      try { new URL(string); return true; } catch (_) { return false; }
     }
 
-    // 測試 webhook 連線
     async function testWebhookConnection(url) {
       const testBtn = document.getElementById('test-webhook-btn');
       const originalText = testBtn.textContent;
-      
       testBtn.textContent = '測試中...';
       testBtn.disabled = true;
-      
       try {
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
+        const response = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
         if (response.ok) {
           const data = await response.json();
-          if (Array.isArray(data)) {
-            showNotification(`連線成功！找到 ${data.length} 筆資料`, 'success');
-          } else {
-            showNotification('連線成功！但回應格式不是預期的陣列', 'warning');
-          }
+          showNotification(`連線成功！找到 ${Array.isArray(data) ? data.length : 0} 筆資料`, 'success');
         } else {
           showNotification(`連線失敗：${response.status} ${response.statusText}`, 'error');
         }
@@ -1439,697 +1790,151 @@
       }
     }
 
+    function showSettingsPanel() {
+      const panelId = 'settings-panel';
+      if (document.getElementById(panelId)) document.getElementById(panelId).remove();
+      const panel = document.createElement('div');
+      panel.id = panelId;
+      // 使用變體系統：寬版面板變體
+      panel.style.cssText = applyComponentVariant('panel', 'wide');
+      panel.innerHTML = `
+        <h2 style="${UI_COMPONENTS.panel.header}"><span>系統設定</span><button id="close-settings-panel" style="${UI_COMPONENTS.closeButton.white}">X</button></h2>
+        <div style="padding:20px;">
+          <label style="display:block;margin-bottom:8px;font-weight:bold;">遠端匯入 Webhook 網址：</label>
+          <input type="url" id="webhook-url-input" style="${UI_COMPONENTS.input.url}" value="${getCurrentWebhookUrl()}">
+          <div style="margin-top:8px;font-size:12px;color:#666;">預設值：${DEFAULT_WEBHOOK_URL}</div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button id="reset-webhook-btn" style="${applyComponentVariant('button', 'default', 'secondary')}">重置</button>
+            <button id="save-webhook-btn" style="${applyComponentVariant('button', 'default', 'primary')}">儲存</button>
+          </div>
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;"><button id="test-webhook-btn" style="${applyComponentVariant('button', 'fullWidth', 'success')}">測試連線</button></div>
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;"><button id="open-files-page-btn" style="${applyComponentVariant('button', 'fullWidth', 'purple')}">🔗 開啟 Files.php</button></div>
+        </div>`;
+      document.body.appendChild(panel);
+      document.getElementById('close-settings-panel').onclick = () => panel.remove();
+      document.getElementById('save-webhook-btn').onclick = () => { const url = document.getElementById('webhook-url-input').value.trim(); if(isValidUrl(url)){ saveWebhookSetting(url); showNotification('設定已儲存', 'success'); } else { showNotification('請輸入有效的網址格式', 'error'); } };
+      document.getElementById('reset-webhook-btn').onclick = () => { document.getElementById('webhook-url-input').value = DEFAULT_WEBHOOK_URL; saveWebhookSetting(DEFAULT_WEBHOOK_URL); showNotification('已重置為預設值', 'success'); };
+      document.getElementById('test-webhook-btn').onclick = () => { const url = document.getElementById('webhook-url-input').value.trim(); if(isValidUrl(url)) testWebhookConnection(url); else showNotification('請輸入有效的網址格式', 'error'); };
+      document.getElementById('open-files-page-btn').onclick = () => { const url = new URL(getCurrentWebhookUrl()); window.open(`${url.protocol}//${url.host}${url.pathname}`, '_blank'); };
+    }
+
     async function handleRemoteQuickImport(e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      console.log('開始遠端匯入流程...');
-
+      e.preventDefault(); e.stopPropagation();
       const processingMsg = document.createElement('div');
-      processingMsg.textContent = ' 正在從遠端獲取資料清單，請稍候...';
-      processingMsg.style.cssText = COMMON_STYLES.processingMsg;
+      processingMsg.textContent = '正在獲取資料...';
+      processingMsg.style.cssText = UI_COMPONENTS.processing.base;
       document.body.appendChild(processingMsg);
-
       try {
         const webhookUrl = getCurrentWebhookUrl();
-        console.log(`📁 正在從 ${webhookUrl} 獲取檔案清單...`);
         const response = await fetch(webhookUrl);
-
-        if (!response.ok) {
-          throw new Error(`無法獲取檔案清單: ${response.status} ${response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error(`無法獲取檔案清單: ${response.statusText}`);
         const filesToImport = await response.json();
-
         if (!filesToImport || !filesToImport.length) {
-          showNotification('遠端伺服器上沒有需要匯入的檔案', 'info');
-          processingMsg.remove();
-          return;
+          showNotification('遠端沒有需要匯入的檔案', 'info');
+        } else {
+          buildRemoteImportSelectionPanel(filesToImport);
         }
-
-        console.log(`找到 ${filesToImport.length} 個檔案，準備顯示選擇面板...`);
-        processingMsg.remove(); // 移除初始的處理中提示
-        buildRemoteImportSelectionPanel(filesToImport); // 顯示選擇面板
-
       } catch (error) {
+        ERROR_HANDLER.handle(error, 'remote-import');
+      } finally {
         processingMsg.remove();
-          console.error('遠端匯入失敗:', error);
-          alert(` 遠端匯入失敗: ${error.message}`);
       }
     }
 
-    // 處理單個遠端檔案匯入的函數（分批處理版本）
-    async function handleSingleRemoteImport(fileInfo) {
-      console.log(`⏳ 開始匯入單筆資料: ${fileInfo.title}`);
+    function buildRemoteImportSelectionPanel(files = []) {
+      const panelId = 'remote-import-selection-panel';
+      if(document.getElementById(panelId)) document.getElementById(panelId).remove();
+      const newPanel = document.createElement('div');
+      newPanel.id = panelId;
+      // 使用變體系統：自定義寬度面板變體
+      newPanel.style.cssText = applyComponentVariant('panel', 'custom');
+      newPanel.innerHTML = `<h2 style="${UI_COMPONENTS.panel.header}"><span>選擇遠端匯入資料</span><button id="close-remote-import-panel" style="${UI_COMPONENTS.closeButton.white}">X</button></h2><input type="text" id="remote-panel-search" placeholder="輸入名稱或價格搜尋" style="${UI_COMPONENTS.input.search}"><div id="remote-import-list-container"></div>`;
+      const listContainer = newPanel.querySelector('#remote-import-list-container');
+      files.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      files.forEach((fileInfo, i) => {
+        const div = document.createElement('div');
+        div.style = `padding:10px;border-bottom:1px solid #eee;font-size:14px;background-color:${i % 2 === 0 ? '#fff' : '#f0f2f5'};`;
+        div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;"><strong>${fileInfo.title || '未命名'}</strong><button class="import-single-remote-btn" style="${applyComponentVariant('button', 'default', 'success')}">匯入</button></div><div style="color:#666;font-size:13px;margin-top:4px;">價格: ${fileInfo.price} | 日期: ${fileInfo.date.split(' ')[0]}</div>`;
+        const importBtn = div.querySelector('.import-single-remote-btn');
+        if (importBtn) importBtn.onclick = () => handleSingleRemoteImport(fileInfo);
+        listContainer.appendChild(div);
+      });
+      document.body.appendChild(newPanel);
+      document.getElementById('close-remote-import-panel').onclick = () => newPanel.remove();
+      document.getElementById('remote-panel-search').onkeyup = (e) => {
+        const inputValue = e.target.value.trim().toLowerCase();
+        listContainer.querySelectorAll('div[data-title]').forEach(item => {
+          const title = item.dataset.title.toLowerCase();
+          const price = item.dataset.price.toLowerCase();
+          item.style.display = (title.includes(inputValue) || price.includes(inputValue)) ? '' : 'none';
+        });
+      };
+    }
 
-      // 創建可取消的進度顯示
+    async function handleSingleRemoteImport(fileInfo) {
       const progressDiv = createCancellableProgress(fileInfo.title);
       const progressText = progressDiv.querySelector('.progress-text');
       const progressFill = progressDiv.querySelector('.progress-fill');
-
       try {
-        // 1. 下載 JSON 檔案
         progressText.textContent = '正在下載檔案...';
         progressFill.style.width = '10%';
-        
-        console.log(`下載檔案: ${fileInfo.download_url}`);
-        const fileContentResponse = await fetch(fileInfo.download_url);
-        
-        if (!fileContentResponse.ok) {
-          throw new Error(`無法下載檔案: ${fileContentResponse.status} ${fileContentResponse.statusText}`);
-        }
-        
+        const baseUrl = getCurrentWebhookUrl().split('?')[0];
+        const downloadUrl = `${baseUrl}?action=download&file=${fileInfo.filename}`;
+        const fileContentResponse = await fetch(downloadUrl);
+        if (!fileContentResponse.ok) throw new Error(`無法下載檔案: ${fileContentResponse.statusText}`);
         const jsonData = await fileContentResponse.json();
-        
-        // 2. 檢查檔案大小
-        const fileSize = JSON.stringify(jsonData).length;
-        const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
-        console.log(` 檔案大小: ${fileSizeMB}MB`);
-        
-        if (fileSizeMB > 5) {
-          progressText.textContent = `警告: 檔案較大 (${fileSizeMB}MB)，處理可能需要較長時間...`;
-        }
-        
-        progressFill.style.width = '20%';
-        
-        // 3. 分批處理圖片
+        progressFill.style.width = APP_CONSTANTS.UI_COMPONENTS.PROGRESS.INITIAL;
         if (jsonData.Photos && Array.isArray(jsonData.Photos) && jsonData.Photos.length > 0) {
-          console.log(` 開始分批處理 ${jsonData.Photos.length} 張圖片...`);
-          
           const processedPhotos = [];
-          const batchSize = 1; // 一次處理1張圖片
-          const totalPhotos = jsonData.Photos.length;
-          
-          for (let i = 0; i < totalPhotos; i += batchSize) {
-            const batch = jsonData.Photos.slice(i, i + batchSize);
-            const progress = 20 + Math.round((i / totalPhotos) * 60); // 20%-80%
-            
-            progressText.textContent = ` 處理圖片中... ${i + 1}/${totalPhotos}`;
-            progressFill.style.width = `${progress}%`;
-            
-            // 處理這批圖片
-            for (const photo of batch) {
-              try {
-                if (photo.Photo && photo.Photo.startsWith('data:image')) {
-                  // 轉換 Base64 為 File
-                  const filename = photo.filename || `image_${i + 1}.jpg`;
-                  const imageFile = optimizedBase64ToFile(photo.Photo, filename);
-                  
-                  // 上傳圖片
-                  const uploadResult = await uploadImage(imageFile);
-                  
-                  processedPhotos.push({
-                    ...photo,
-                    Photo: uploadResult.FilePath || uploadResult,
-                    uploaded: true
-                  });
-                  
-                  console.log(` 圖片 ${i + 1} 處理完成`);
-                } else {
-                  processedPhotos.push(photo);
-                }
-              } catch (error) {
-                console.error(` 處理圖片 ${i + 1} 失敗:`, error);
-                processedPhotos.push({
-                  ...photo,
-                  error: error.message
-                });
-              }
-            }
-            
-            // 給瀏覽器喘息的機會
-            await new Promise(resolve => setTimeout(resolve, 500));
+          for (let i = 0; i < jsonData.Photos.length; i++) {
+            progressText.textContent = `處理圖片中... ${i + 1}/${jsonData.Photos.length}`;
+            progressFill.style.width = `${APP_CONSTANTS.UI_COMPONENTS.PROGRESS.PROCESSING_BASE + Math.round(((i+1) / jsonData.Photos.length) * APP_CONSTANTS.UI_COMPONENTS.PROGRESS.PROCESSING_RANGE)}%`;
+            const photo = jsonData.Photos[i];
+            if (photo.Photo && photo.Photo.startsWith('data:image')) {
+              const imageFile = optimizedBase64ToFile(photo.Photo, photo.filename || `image_${i + 1}.jpg`);
+              const uploadResult = await uploadImage(imageFile);
+              processedPhotos.push({ ...photo, Photo: uploadResult.FilePath || uploadResult, uploaded: true });
+            } else { processedPhotos.push(photo); }
+            await new Promise(resolve => setTimeout(resolve, APP_CONSTANTS.TIMING.API_RETRY_DELAY));
           }
-          
           jsonData.Photos = processedPhotos;
         }
-        
-        // 4. 更新日期格式
-        progressText.textContent = '📅 更新日期資訊...';
+        progressText.textContent = '更新日期資訊...';
         progressFill.style.width = '85%';
-        
         const now = new Date();
         const createDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        const modifyDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14, 0, 0, 0, 0);
-        
-        const formatDate = (date) => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}T00:00:00.00`;
-        };
-        
+        const modifyDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + APP_CONSTANTS.BUSINESS.DEFAULT_AUCTION_DURATION_DAYS, 0, 0, 0, 0);
+        const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T00:00:00.00`;
         jsonData.StartDate = formatDate(createDate);
         jsonData.EndDate = formatDate(modifyDate);
-        
-        // 5. 送出到 API
-        progressText.textContent = '正在送出資料到伺服器...';
-        progressFill.style.width = '90%';
-        
-        const result = await directSubmitToAPI(jsonData);
-        
-        // 6. 完成
-        progressText.textContent = ' 匯入完成！';
-        progressFill.style.width = '100%';
-        
-        console.log('遠端匯入完成！', result);
-        
-        // 延遲一下再移除進度條
-        setTimeout(() => {
-          progressDiv.remove();
-        }, 2000);
-        
+        progressText.textContent = '正在送出資料...';
+        progressFill.style.width = APP_CONSTANTS.UI_COMPONENTS.PROGRESS.FINAL;
+        await directSubmitToAPI(jsonData);
+        progressText.textContent = '匯入完成！';
+        progressFill.style.width = APP_CONSTANTS.UI_COMPONENTS.PROGRESS.COMPLETE;
+        setTimeout(() => progressDiv.remove(), APP_CONSTANTS.TIMING.PROGRESS_CLEANUP_DELAY);
       } catch (error) {
         progressDiv.remove();
-        console.error(` 匯入檔案 ${fileInfo.title} 失敗:`, error);
-        alert(` 匯入檔案 ${fileInfo.title} 失敗: ${error.message}`);
+        ERROR_HANDLER.handle(error, 'remote-import', { fallbackMessage: `匯入檔案 ${fileInfo.title} 失敗` });
       }
     }
 
-    // 創建可取消的進度顯示
     function createCancellableProgress(title) {
       const div = document.createElement('div');
-      div.innerHTML = `
-        <div class="progress-modal" style="
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-          z-index: 10000; min-width: 300px; text-align: center;
-        ">
-          <h3 style="margin: 0 0 15px 0; color: #007baf;"> 處理中: ${title}</h3>
-          <div class="progress-bar" style="
-            width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; margin: 15px 0;
-            overflow: hidden;
-          ">
-            <div class="progress-fill" style="
-              height: 100%; background: #007baf; width: 0%; transition: width 0.3s;
-            "></div>
-          </div>
-          <p class="progress-text" style="margin: 10px 0; font-size: 14px; color: #666;">準備中...</p>
-          <button class="cancel-btn" onclick="this.parentElement.parentElement.remove()" style="
-            background: #dc3545; color: white; border: none; padding: 8px 16px;
-            border-radius: 4px; cursor: pointer; margin-top: 10px; font-size: 12px;
-          ">取消</button>
-        </div>
-      `;
+      div.innerHTML = `<div class="progress-modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10000;min-width:300px;text-align:center;"><h3 style="margin:0 0 15px 0;color:#007baf;">處理中: ${title}</h3><div class="progress-bar" style="width:100%;height:20px;background:#f0f0f0;border-radius:10px;margin:15px 0;overflow:hidden;"><div class="progress-fill" style="height:100%;background:#007baf;width:0%;transition:width 0.3s;"></div></div><p class="progress-text" style="margin:10px 0;font-size:14px;color:#666;">準備中...</p><button class="cancel-btn" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;margin-top:10px;font-size:12px;">取消</button></div>`;
       document.body.appendChild(div);
       return div;
     }
 
-
-    // 建立遠端匯入選擇面板的函數
-    function buildRemoteImportSelectionPanel(files = []) {
-
-      const panelId = 'remote-import-selection-panel';
-      const panel = document.getElementById(panelId);
-      if (panel) panel.remove(); // 確保舊面板移除
-
-      const newPanel = document.createElement('div');
-      newPanel.id = panelId;
-      newPanel.style.cssText = COMMON_STYLES.panel;
-      newPanel.style.width = '380px';
-      newPanel.innerHTML = `
-        <h2 style="${COMMON_STYLES.panelHeader}">
-          <span>選擇遠端匯入資料</span>
-          <button id="close-remote-import-panel" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer;">X</button>
-        </h2>
-        <input type="text" id="remote-panel-search" placeholder="輸入名稱或價格搜尋" style="${COMMON_STYLES.searchInput}">
-        <div id="remote-import-list-container"></div>
-      `;
-
-      const listContainer = newPanel.querySelector('#remote-import-list-container');
-      
-      // 排序檔案 (例如按日期最新)
-      files.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      files.forEach((fileInfo, i) => {
-        const div = document.createElement('div');
-        div.dataset.title = fileInfo.title; // 用於搜尋
-        div.dataset.price = fileInfo.price; // 用於搜尋
-        const backgroundColor = i % 2 === 0 ? '#ffffff' : '#f0f2f5';
-        div.style = `padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; background-color: ${backgroundColor};`;
-        div.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>${fileInfo.title || '未命名'}</strong>
-            <button class="import-single-remote-btn" style="${COMMON_STYLES.button} ${COMMON_STYLES.buttonGreen}">匯入</button>
-          </div>
-          <div style="color: #666; font-size: 13px; margin-top: 4px;">
-            價格: ${fileInfo.price} | 日期: ${fileInfo.date.split(' ')[0]}
-          </div>
-        `;
-        
-        // 將 fileInfo 綁定到按鈕上，以便點擊時傳遞
-        const importBtn = div.querySelector('.import-single-remote-btn');
-        if (importBtn) {
-          importBtn.onclick = () => handleSingleRemoteImport(fileInfo);
-        }
-        listContainer.appendChild(div);
-      });
-
-      document.body.appendChild(newPanel);
-      document.getElementById('close-remote-import-panel').onclick = () => {
-        newPanel.remove(); // 銷毀面板
-      };
-
-      // 搜尋功能
-      document.getElementById('remote-panel-search').onkeyup = (e) => {
-        const inputValue = e.target.value.trim().toLowerCase();
-        const items = listContainer.querySelectorAll('div[data-title]');
-        items.forEach(item => {
-          const title = item.dataset.title.toLowerCase();
-          const price = item.dataset.price.toLowerCase();
-          if (title.includes(inputValue) || price.includes(inputValue)) {
-            item.style.display = ''; // 顯示
-          } else {
-            item.style.display = 'none'; // 隱藏
-          }
-        });
-      };
-    }
-
-    if (!statsBtn || !exportBtn || !exportAllBtn || !panelBtn || !printBtn) {
-      console.error('按鈕未正確定義');
-      return;
-    }
-
+    // --- 按鈕插入邏輯 ---
     addBtn.parentNode.insertBefore(statsBtn, addBtn.nextSibling);
-    addBtn.parentNode.insertBefore(exportBtn, statsBtn.nextSibling);
-    addBtn.parentNode.insertBefore(exportAllBtn, exportBtn.nextSibling);
-    addBtn.parentNode.insertBefore(panelBtn, exportAllBtn.nextSibling);
+    addBtn.parentNode.insertBefore(panelBtn, statsBtn.nextSibling);
     addBtn.parentNode.insertBefore(printBtn, panelBtn.nextSibling);
-    console.log('已插入統計、輕量匯出、全部匯出、資料面板、列印表格按鈕');
-  }
+    addBtn.parentNode.insertBefore(quickImportBtn, printBtn.nextSibling);
+    addBtn.parentNode.insertBefore(remoteQuickImportBtn, quickImportBtn.nextSibling);
+    addBtn.parentNode.insertBefore(settingsBtn, remoteQuickImportBtn.nextSibling);
 
-  // JSON 匯入功能相關函數
-  // 強制更新 Vue 組件
-  function forceVueUpdate(input, value) {
-    // 獲取欄位標籤用於日誌
-    const label = input.closest('.el-form-item')?.querySelector('.el-form-item__label')?.textContent.trim() || '未知欄位';
-    
-    console.log(`🔧 設定欄位 "${label}": 原始值="${input.value}", 新值="${value}"`);
-    
-    // 直接設定值
-    input.value = value;
-    
-    // 觸發 Vue 的響應式更新
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // 數字輸入框自動處理轉換
-    if (input.type === 'number' && value) {
-      input.value = parseFloat(value) || 0;
-    }
-    
-    // 額外觸發更多事件確保更新
-    input.dispatchEvent(new Event('blur', { bubbles: true }));
-    input.dispatchEvent(new Event('focus', { bubbles: true }));
-    
-    console.log(` 欄位 "${label}" 設定完成: value="${input.value}", type="${input.type}"`);
-  }
-
-
-  // 增強版填充表單函數（支援 Element UI Select 元件）
-  async function fillForm(json) {
-    const form = document.querySelector('.vxe-modal--box .el-form');
-    if (!form) {
-      console.error('未找到表單');
-      return;
-    }
-
-    // 先處理非 Select 欄位
-    const nonSelectItems = [];
-    const selectItems = [];
-
-    const formItems = form.querySelectorAll('.el-form-item');
-    formItems.forEach(item => {
-      const label = item.querySelector('.el-form-item__label');
-      const input = item.querySelector('input, textarea, select');
-      
-      if (!label || !input) return;
-      
-      const labelText = label.textContent.trim();
-      let value = '';
-
-      // 根據標籤文字映射 JSON 欄位
-      switch (labelText) {
-        case '品名':
-          value = json.Name || '';
-          break;
-        case '類別':
-          // 優先使用 CategoryName，如果沒有則從 CategoryID 反推
-          value = json.CategoryName || getCategoryNameFromID(json.CategoryID) || '';
-          break;
-        case '行政區':
-          value = json.DistName || '';
-          break;
-        case '產品描述':
-          value = json.Description || '';
-          break;
-        case '長':
-          value = json.Length ?? '';
-          break;
-        case '寬':
-          value = json.Width ?? '';
-          break;
-        case '高':
-          value = json.Height ?? '';
-          break;
-        case '交貨地點':
-          value = json.DeliveryAddress || '';
-          break;
-        case '起標價格':
-          value = json.InitPrice || '';
-          break;
-        case '原價':
-          value = json.OriginPrice || '';
-          break;
-        default:
-          return;
-      }
-
-      if (!value && !(labelText === '長' || labelText === '寬' || labelText === '高')) {
-        return;
-      }
-
-      // 分類處理
-      if (input.type === 'text' && (labelText === '類別' || labelText === '行政區')) {
-        selectItems.push({ item, labelText, input, value });
-      } else {
-        // 特殊處理長寬高欄位
-        if (labelText === '長' || labelText === '寬' || labelText === '高') {
-          // 處理各種可能的值：0, "0", "", null, undefined
-          let numValue;
-          if (value === 0 || value === '0') {
-            numValue = 0;
-          } else if (!value) {
-            numValue = 0;
-          } else {
-            numValue = value;
-          }
-          nonSelectItems.push({ item, labelText, input, value: numValue });
-        } else {
-          nonSelectItems.push({ item, labelText, input, value });
-        }
-      }
-    });
-
-    // 先處理非 Select 欄位
-    nonSelectItems.forEach(({ input, value }) => {
-      forceVueUpdate(input, value);
-    });
-
-    // 順序處理 Select 欄位
-    for (const { labelText, input, value } of selectItems) {
-      await processSelectField(labelText, input, value);
-    }
-
-    // 處理拍賣期間欄位（自動設定現在時間）
-    await processAuctionPeriod();
-
-    // 處理圖片上傳（如果是打包的 JSON）
-    if (json.Photos && Array.isArray(json.Photos) && json.Photos.length > 0) {
-      // 檢查是否為打包的 JSON（包含 Base64 資料）
-      const hasBase64Images = json.Photos.some(photo => photo.Photo && photo.Photo.startsWith('data:image'));
-      
-      if (hasBase64Images) {
-        await uploadImagesFromPackagedJson(json.Photos);
-      }
-    }
-  }
-
-  // 從打包的 JSON 上傳圖片的函數
-  async function uploadImagesFromPackagedJson(photos) {
-    // 清空現有的視覺預覽（如果有的話）
-    const form = document.querySelector('.vxe-modal--box .el-form');
-    if (form) {
-      const formItems = form.querySelectorAll('.el-form-item');
-      formItems.forEach(item => {
-        const label = item.querySelector('.el-form-item__label');
-        if (label && label.textContent.trim() === '預覽圖') {
-          const previewContainer = item.querySelector('.image-preview-container');
-          if (previewContainer) {
-            previewContainer.innerHTML = '';
-          }
-        }
-      });
-    }
-    
-    const uploadedImages = [];
-    
-    // 使用 Promise.all 來並行處理所有圖片的上傳（根據您的建議）
-    const uploadPromises = photos.map(async (photo, index) => {
-      try {
-        // 檢查是否有 Base64 資料
-        if (!photo.Photo || !photo.Photo.startsWith('data:image')) {
-          return null;
-        }
-        
-        // 取得檔案名稱
-        const filename = photo.filename || photo.PhotoID || `upload_${index + 1}.jpg`;
-        
-        // 將 Base64 轉換為 File 物件
-                        const imageFile = optimizedBase64ToFile(photo.Photo, filename);
-        
-        // 呼叫我們優化後的 uploadImage 函數
-        const uploadResult = await uploadImage(imageFile);
-        
-        return {
-          filename,
-          uploadResult,
-          originalPhoto: photo
-        };
-        
-      } catch (error) {
-        return null;
-      }
-    });
-    
-    // 等待所有圖片上傳完成
-    const uploadResults = await Promise.all(uploadPromises);
-    
-    // 動態渲染預覽（無需重整）
-    uploadResults.forEach(result => {
-      if (result && result.uploadResult) {
-        // 伺服器回應可能是字串 URL 或包含 FilePath 的物件
-        let imageUrl;
-        if (typeof result.uploadResult === 'string') {
-          // 直接是 URL 字串
-          imageUrl = result.uploadResult;
-        } else if (result.uploadResult.FilePath) {
-          // 包含 FilePath 欄位的物件
-          imageUrl = result.uploadResult.FilePath.startsWith('http') 
-            ? result.uploadResult.FilePath 
-            : `https://recycledstuff.ntpc.gov.tw${result.uploadResult.FilePath}`;
-        } else {
-          return;
-        }
-        
-        // 動態建立圖片預覽
-        createImagePreview(imageUrl, result.filename);
-        
-        uploadedImages.push({
-          filename: result.filename,
-          filePath: imageUrl,
-          originalPhoto: result.originalPhoto
-        });
-        
-        // 圖片預覽建立完成
-      }
-    });
-    
-    // 圖片上傳完成
-    
-    // 顯示完成訊息
-    if (uploadedImages.length > 0) {
-      const message = ` 成功上傳 ${uploadedImages.length} 張圖片並建立預覽`;
-      console.log(message);
-      
-      // 顯示完成通知
-      const notification = document.createElement('div');
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #28a745;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 6px;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-size: 14px;
-      `;
-      notification.textContent = message;
-      document.body.appendChild(notification);
-      
-      // 3秒後自動移除
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 3000);
-      
-
-    }
-    
-    return uploadedImages;
-  }
-
-  // 處理單個 Select 欄位的函數
-  function processSelectField(labelText, input, value) {
-    return new Promise((resolve) => {
-      const elSelect = input.closest('.el-select');
-      if (elSelect) {
-        input.click();
-        setTimeout(() => {
-          const allDropdowns = document.querySelectorAll('.el-select-dropdown');
-          
-          if (!allDropdowns.length) {
-            forceVueUpdate(input, value);
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            resolve();
-            return;
-          }
-
-          const visibleDropdown = Array.from(allDropdowns).find(d => window.getComputedStyle(d).display !== 'none');
-
-          if (!visibleDropdown) {
-            forceVueUpdate(input, value);
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            resolve();
-            return;
-          }
-
-          const options = visibleDropdown.querySelectorAll('.el-select-dropdown__item');
-          const matchedOption = Array.from(options).find(option =>
-            option.textContent.trim() === value
-          );
-
-          if (matchedOption) {
-            matchedOption.click();
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          } else {
-            forceVueUpdate(input, value);
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-
-          setTimeout(resolve, 200);
-        }, 100);
-      } else {
-        forceVueUpdate(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        resolve();
-      }
-    });
-  }
-
-  // 處理拍賣期間欄位（自動設定現在時間）
-  async function processAuctionPeriod() {
-    const form = document.querySelector('.vxe-modal--box .el-form');
-    if (!form) return;
-
-    const formItems = form.querySelectorAll('.el-form-item');
-    let startField = null;
-    let endField = null;
-
-    formItems.forEach(item => {
-      const label = item.querySelector('.el-form-item__label');
-      if (label) {
-        const labelText = label.textContent.trim();
-        if (labelText === '拍賣期間(起)') {
-          startField = item.querySelector('input');
-        } else if (labelText === '拍賣期間(迄)') {
-          endField = item.querySelector('input');
-        }
-      }
-    });
-
-    if (!startField || !endField) return;
-
-    await setCurrentTime(startField, '拍賣期間(起)');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (!endField.value?.trim()) {
-      await setCurrentTime(endField, '拍賣期間(迄)', 30);
-    }
-  }
-
-  // 設定時間的輔助函數
-  async function setCurrentTime(input, fieldName, daysToAdd = 0) {
-    return new Promise((resolve) => {
-      // 使用安全的滾動函數
-      safeScrollIntoView(input, { behavior: 'smooth', block: 'center' });
-      input.click();
-      input.focus();
-      
-      const checkForDatePicker = (attempt = 1) => {
-        const nowButton = findNowButton();
-        
-        if (nowButton) {
-          // 使用安全的滾動函數
-          safeScrollIntoView(nowButton, { behavior: 'smooth', block: 'center' });
-          nowButton.click();
-          
-          if (daysToAdd > 0) {
-            setTimeout(() => {
-              const currentValue = input.value;
-              if (currentValue) {
-                const date = new Date(currentValue);
-                date.setDate(date.getDate() + daysToAdd);
-                const newValue = date.toISOString().slice(0, 19).replace('T', ' ');
-                input.value = newValue;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-            }, 300);
-          }
-          resolve();
-        } else if (attempt < 5) {
-          setTimeout(() => checkForDatePicker(attempt + 1), 300);
-        } else {
-          const now = new Date();
-          if (daysToAdd > 0) {
-            now.setDate(now.getDate() + daysToAdd);
-          }
-          const timeString = now.toISOString().slice(0, 19).replace('T', ' ');
-          input.value = timeString;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-          resolve();
-        }
-      };
-      
-      setTimeout(() => checkForDatePicker(), 300);
-    });
-  }
-
-  // 尋找「現在」按鈕的函數
-  function findNowButton() {
-    const buttons = document.querySelectorAll('button');
-    for (const button of buttons) {
-      if (button.textContent.includes('現在') || button.textContent.toLowerCase().includes('now')) {
-        return button;
-      }
-    }
-    
-    const nowButtonByClass = document.querySelector('.el-picker-panel__now-btn, .el-date-picker__now-btn, .el-datetime-picker__now-btn');
-    if (nowButtonByClass) return nowButtonByClass;
-    
-    const datePanels = document.querySelectorAll('.el-picker-panel, .el-date-picker, .el-datetime-picker');
-    for (const panel of datePanels) {
-      const panelButtons = panel.querySelectorAll('button');
-      for (const button of panelButtons) {
-        const buttonText = button.textContent.trim();
-        if (buttonText === '現在' || buttonText === 'Now' || buttonText.includes('現在') || buttonText.includes('now')) {
-          return button;
-        }
-      }
-    }
-    
-    return null;
+    console.log('已插入功能按鈕');
   }
 
 
@@ -2346,7 +2151,7 @@
 
           if (queryBtn) {
             // 確保這不是統計按鈕觸發的
-            if (!window.__statsButtonTriggered) {
+            if (!FurnitureHelper.isStatsTriggered()) {
               try {
                 if (queryBtn.__vue__ && queryBtn.__vue__.$emit) {
                   queryBtn.__vue__.$emit('click');
@@ -2377,22 +2182,6 @@
     insertButtons();
     addEnterKeySupport(); // 頁面更新後重新綁定Enter鍵
   }).observe(buttonContainer, { childList: true, subtree: true });
-  
-
-  
-
-  
-
-  
-
-
-
-  
-
-  
-
-  
-
   
   // 取得類別ID的輔助函數
   function getCategoryID(jsonData) {
@@ -2466,7 +2255,7 @@
       // 觸發查詢按鈕刷新表格
       setTimeout(() => {
         // 檢查是否是統計按鈕觸發的，如果是則跳過避免循環
-        if (window.__statsButtonTriggered) {
+        if (FurnitureHelper.isStatsTriggered()) {
           console.log('跳過查詢按鈕觸發，因為這是統計按鈕發起的操作');
           return;
         }
