@@ -48,10 +48,8 @@ window.addEventListener('message', event => {
         NickName: row.NickName
       };
 
-      // 嘗試找出 UUID 並獲取競標資訊
-      const uuid = row.UUID || row.Guid || row.ProductID || row.ProductId || 
-                   row.BidID || row.BidId || 
-                   (Array.isArray(row.ID) ? row.ID.find(id => typeof id === 'string' && id.length > 20) : row.ID);
+      // 使用 ID 欄位（Vue 組件中的 this.data.ID）
+      const uuid = row.ID;
       
       if (uuid && typeof uuid === 'string' && uuid.length > 20) {
         const bids = await fetchBidLog(uuid);
@@ -172,10 +170,8 @@ window.addEventListener('message', event => {
     
     (async () => {
       for (const row of panelData) {
-        // 嘗試找出 UUID
-        const uuid = row.UUID || row.Guid || row.ProductID || row.ProductId || 
-                     row.BidID || row.BidId || 
-                     (Array.isArray(row.ID) ? row.ID.find(id => typeof id === 'string' && id.length > 20) : row.ID);
+        // 使用 ID 欄位（Vue 組件中的 this.data.ID）
+        const uuid = row.ID;
         
         if (uuid && typeof uuid === 'string' && uuid.length > 20) {
           const bids = await fetchBidLog(uuid);
@@ -211,6 +207,135 @@ window.addEventListener('message', event => {
 
   if (source === 'run-vue-print') {
     window.postMessage({ source: 'vue-print', data }, '*');
+  }
+
+  if (source === 'run-vue-panel-for-print') {
+    // 取得所有資料，使用與面板相同的邏輯來處理競標資訊
+    const printData = data.map(row => ({ ...row }));
+
+    // 取消處理標誌
+    let isCancelled = false;
+
+    // 監聽取消訊號
+    const cancelListener = (event) => {
+      if (event.data?.source === 'cancel-print-process') {
+        isCancelled = true;
+        window.removeEventListener('message', cancelListener);
+      }
+    };
+    window.addEventListener('message', cancelListener);
+
+    // 依序查詢每一筆的競標紀錄
+    const fetchBidLog = (uuid) => new Promise(resolve => {
+      if (!uuid) return resolve(null);
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', `api/Product/GetBidLog?id=${uuid}`);
+      xhr.setRequestHeader('accept', 'application/json, text/plain, */*');
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const arr = JSON.parse(xhr.responseText);
+            resolve(Array.isArray(arr) ? arr : []);
+          } catch { resolve([]); }
+        } else {
+          resolve([]);
+        }
+      };
+      xhr.onerror = () => resolve([]);
+      xhr.send();
+    });
+
+    (async () => {
+      // 限制同時請求數量，避免 DDOS
+      const BATCH_SIZE = 3; // 每次最多3個並發請求
+      const DELAY_MS = 200; // 每批次間隔200ms
+      const totalItems = printData.length;
+
+      for (let i = 0; i < printData.length; i += BATCH_SIZE) {
+        // 檢查是否被取消
+        if (isCancelled) {
+          console.log('列印處理已被使用者取消');
+          return;
+        }
+
+        const batch = printData.slice(i, i + BATCH_SIZE);
+        const currentBatchEnd = Math.min(i + BATCH_SIZE, totalItems);
+
+        // 發送進度更新
+        window.postMessage({
+          source: 'print-progress',
+          current: i,
+          total: totalItems,
+          detail: `正在處理第 ${i + 1}-${currentBatchEnd} 項...`
+        }, '*');
+
+        // 並行處理這一批資料
+        await Promise.all(batch.map(async (row) => {
+          // 使用 ID 欄位（Vue 組件中的 this.data.ID）
+          const uuid = row.ID;
+
+          if (uuid && typeof uuid === 'string' && uuid.length > 20) {
+            try {
+              const bids = await fetchBidLog(uuid);
+              row.BidChecked = true; // 標記已檢查競標資料
+              if (bids.length > 0) {
+                // 取最高價
+                const maxBid = bids.reduce((a, b) =>
+                  (parseFloat(a.BidPrice||a.Price||a.Amount||0) > parseFloat(b.BidPrice||b.Price||b.Amount||0) ? a : b)
+                );
+                row.BidPrice = maxBid.BidPrice || maxBid.Price || maxBid.Amount;
+
+                // 嘗試所有可能的出價者欄位名稱
+                row.Bidder = maxBid.BidderName || maxBid.UserName || maxBid.Name || maxBid.Bidder ||
+                            maxBid.Account || maxBid.User || maxBid.BidderAccount || maxBid.BidderID ||
+                            maxBid.CustomerName || maxBid.Customer || maxBid.MemberName || maxBid.Member;
+                row.HasBids = true; // 標記有競標資料
+              } else {
+                row.BidPrice = null;
+                row.Bidder = null;
+                row.HasBids = false; // 標記無競標資料
+              }
+            } catch (error) {
+              console.warn(`獲取競標資料失敗 (${uuid}):`, error);
+              row.BidPrice = null;
+              row.Bidder = null;
+              row.BidChecked = false;
+              row.HasBids = false;
+            }
+          } else {
+            row.BidPrice = null;
+            row.Bidder = null;
+            row.BidChecked = false; // 標記未檢查（無有效UUID）
+            row.HasBids = false;
+          }
+        }));
+
+        // 批次間延遲，避免請求過於頻繁
+        if (i + BATCH_SIZE < printData.length) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+
+          // 在延遲後再次檢查是否被取消
+          if (isCancelled) {
+            console.log('列印處理已被使用者取消');
+            return;
+          }
+        }
+      }
+
+      // 發送完成進度
+      window.postMessage({
+        source: 'print-progress',
+        current: totalItems,
+        total: totalItems,
+        detail: '資料處理完成，正在生成表格...'
+      }, '*');
+
+      window.postMessage({ source: 'vue-panel-for-print', data: printData }, '*');
+
+      // 清理監聽器
+      window.removeEventListener('message', cancelListener);
+    })();
+    return;
   }
 
 

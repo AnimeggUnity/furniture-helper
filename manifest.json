@@ -12,7 +12,7 @@
   "content_scripts": [
     {
       "matches": ["https://recycledstuff.ntpc.gov.tw/BidMgr/*"],
-      "js": ["content.js"],
+      "js": ["constants.js", "utils.js", "api.js", "content.js"],
       "run_at": "document_idle"
     }
   ],
