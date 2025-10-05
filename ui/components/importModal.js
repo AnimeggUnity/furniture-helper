@@ -207,6 +207,27 @@
           </div>
         </div>
 
+        <div style="background: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: bold; font-size: 16px;">
+              <input type="checkbox" id="override-dates-checkbox" style="transform: scale(1.2);">
+              <span>覆寫競標日期</span>
+            </label>
+          </div>
+          <div id="date-override-options" style="display: none; padding-left: 10px; border-left: 3px solid #007baf;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 14px; color: #495057;">競標</span>
+              <input type="number" id="batch-auction-duration" value="14" min="1" max="90"
+                     style="width: 60px; padding: 4px 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
+              <span style="font-size: 14px; color: #495057;">天（1-90天）</span>
+            </div>
+            <div id="date-preview" style="font-size: 13px; color: #6c757d; padding: 8px; background: #f8f9fa; border-radius: 4px; margin-top: 8px;">
+              開始日期：<span id="preview-start-date"></span><br>
+              結束日期：<span id="preview-end-date"></span>
+            </div>
+          </div>
+        </div>
+
         <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
           <p style="margin: 0; font-size: 14px;">
             <strong>注意：</strong>請確保所有相關的項目檔案都在同一個資料夾中，匯入時會自動尋找對應的檔案。
@@ -239,9 +260,56 @@
     const selectedCountSpan = modal.querySelector('#import-selected-count');
     const startImportBtn = modal.querySelector('#start-import');
     const cancelBtn = modal.querySelector('#cancel-import');
+    const overrideDatesCheckbox = modal.querySelector('#override-dates-checkbox');
+    const dateOverrideOptions = modal.querySelector('#date-override-options');
+    const batchDurationInput = modal.querySelector('#batch-auction-duration');
+    const previewStartDate = modal.querySelector('#preview-start-date');
+    const previewEndDate = modal.querySelector('#preview-end-date');
 
     let manifestData = null;
     let itemFiles = {};
+
+    // 日期預覽更新函數
+    function updateDatePreview() {
+      const duration = parseInt(batchDurationInput.value) || 14;
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + duration, 0, 0, 0, 0);
+
+      const formatDisplayDate = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      };
+
+      previewStartDate.textContent = formatDisplayDate(startDate);
+      previewEndDate.textContent = `${formatDisplayDate(endDate)} (${duration}天)`;
+    }
+
+    // 覆寫日期 checkbox 變更
+    if (overrideDatesCheckbox) {
+      overrideDatesCheckbox.onchange = () => {
+        if (overrideDatesCheckbox.checked) {
+          dateOverrideOptions.style.display = 'block';
+          updateDatePreview();
+        } else {
+          dateOverrideOptions.style.display = 'none';
+        }
+      };
+    }
+
+    // 天數輸入框變更
+    if (batchDurationInput) {
+      batchDurationInput.oninput = (e) => {
+        const value = parseInt(e.target.value);
+        if (isNaN(value) || value < 1 || value > 90) {
+          e.target.style.borderColor = '#dc3545';
+          e.target.title = '請輸入 1-90 之間的數字';
+        } else {
+          e.target.style.borderColor = '#28a745';
+          e.target.title = '';
+          updateDatePreview();
+        }
+      };
+    }
 
     manifestInput.onchange = async (e) => {
       const files = Array.from(e.target.files);
@@ -308,8 +376,14 @@
         return;
       }
 
+      // 收集日期覆寫設定
+      const dateOverrideSettings = {
+        enabled: overrideDatesCheckbox && overrideDatesCheckbox.checked,
+        duration: batchDurationInput ? parseInt(batchDurationInput.value) || 14 : 14
+      };
+
       modal.remove();
-      await processImportedItems(selectedItems, itemFiles);
+      await processImportedItems(selectedItems, itemFiles, dateOverrideSettings);
     };
 
     cancelBtn.onclick = () => modal.remove();
@@ -390,8 +464,14 @@
     countSpan.textContent = `(已選 ${checkedCount} 項)`;
   }
 
-  async function processImportedItems(selectedItems, itemFiles) {
-    app.showNotification(`開始批次匯入 ${selectedItems.length} 個項目到系統...`, 'info');
+  async function processImportedItems(selectedItems, itemFiles, dateOverrideSettings = {}) {
+    const { enabled: overrideDates, duration: customDuration } = dateOverrideSettings;
+
+    if (overrideDates) {
+      app.showNotification(`開始批次匯入 ${selectedItems.length} 個項目（競標 ${customDuration} 天）...`, 'info');
+    } else {
+      app.showNotification(`開始批次匯入 ${selectedItems.length} 個項目到系統...`, 'info');
+    }
 
     let successCount = 0;
     let errorCount = 0;
@@ -419,6 +499,22 @@
           console.warn(`檔案內容不匹配: ${item.filename}`);
           errorCount++;
           continue;
+        }
+
+        // 日期覆寫處理
+        if (overrideDates) {
+          const now = new Date();
+          const createDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + customDuration, 0, 0, 0, 0);
+
+          const formatDate = (date) => {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T00:00:00.00`;
+          };
+
+          itemData.StartDate = formatDate(createDate);
+          itemData.EndDate = formatDate(endDate);
+
+          console.log(`📅 覆寫日期: ${itemData.StartDate} → ${itemData.EndDate}`);
         }
 
         await app.directSubmitToAPI(itemData);

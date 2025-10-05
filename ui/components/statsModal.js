@@ -150,11 +150,51 @@
     return total;
   }
 
+  function createDateSeparator(dateStr, color) {
+    const separator = document.createElement('div');
+    separator.style.cssText = `
+      margin: 8px 0 6px 0;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: ${color};
+      background: linear-gradient(to right, ${color}15 0%, transparent 100%);
+      border-left: 3px solid ${color};
+      display: flex;
+      align-items: center;
+    `;
+
+    const dateLabel = document.createElement('span');
+    dateLabel.textContent = dateStr;
+    dateLabel.style.cssText = 'margin-right: 8px;';
+
+    const line = document.createElement('span');
+    line.style.cssText = `
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, ${color}40, transparent);
+      margin-left: 8px;
+    `;
+
+    separator.appendChild(dateLabel);
+    separator.appendChild(line);
+
+    return separator;
+  }
+
   function createMonthSection(monthData, month, color) {
     const monthDiv = document.createElement('div');
     monthDiv.style.cssText = 'margin-bottom: 10px; border-left: 2px solid #ccc; padding-left: 10px;';
 
-    const monthTotal = Object.keys(monthData).reduce((total, day) => total + monthData[day].length, 0);
+    // 扁平化所有日期的項目到單一陣列
+    const allItems = [];
+    Object.keys(monthData).forEach(day => {
+      monthData[day].forEach(item => {
+        allItems.push({ ...item, _displayDate: day });
+      });
+    });
+
+    const monthTotal = allItems.length;
 
     const monthHeader = document.createElement('div');
     monthHeader.style.cssText = 'font-weight: 600; font-size: 13px; color: #555; cursor: pointer; padding: 3px 0; user-select: none;';
@@ -166,72 +206,59 @@
     monthHeader.onclick = (e) => {
       e.stopPropagation();
       const isHidden = monthContent.style.display === 'none';
+
+      // 延遲載入：只在第一次展開時渲染內容
+      if (isHidden && monthContent.innerHTML === '') {
+        // 排序：日期 desc → AutoID desc
+        allItems.sort((a, b) => {
+          const dateCompare = b._displayDate.localeCompare(a._displayDate);
+          if (dateCompare !== 0) return dateCompare;
+          return b.AutoID - a.AutoID;
+        });
+
+        // 渲染項目，並在日期變化時插入分隔線
+        let currentDate = null;
+        allItems.forEach(item => {
+          if (item._displayDate !== currentDate) {
+            currentDate = item._displayDate;
+            const dateSeparator = createDateSeparator(currentDate, color);
+            monthContent.appendChild(dateSeparator);
+          }
+          const itemElement = formatItemDisplay(item, color);
+          monthContent.appendChild(itemElement);
+        });
+      }
+
       monthContent.style.display = isHidden ? 'block' : 'none';
       monthHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
     };
-
-    const sortedDays = Object.keys(monthData).sort((a, b) => b.localeCompare(a));
-    sortedDays.forEach(day => {
-      const daySection = createDaySection(monthData[day], day, color);
-      monthContent.appendChild(daySection);
-    });
 
     monthDiv.appendChild(monthHeader);
     monthDiv.appendChild(monthContent);
     return monthDiv;
   }
 
-  function createDaySection(dayItems, day, color) {
-    const dayDiv = document.createElement('div');
-    dayDiv.style.cssText = 'margin-bottom: 8px; padding-left: 10px;';
-
-    const dayHeader = document.createElement('div');
-    dayHeader.style.cssText = 'font-size: 12px; color: #666; cursor: pointer; padding: 2px 0; user-select: none;';
-    dayHeader.innerHTML = `<span class="toggle">▶</span> ${day}: ${dayItems.length}筆`;
-
-    const dayContent = document.createElement('div');
-    dayContent.style.cssText = 'margin-left: 15px; display: none; max-height: 200px; overflow-y: auto;';
-
-    dayHeader.onclick = (e) => {
-      e.stopPropagation();
-      const isHidden = dayContent.style.display === 'none';
-      if (isHidden && dayContent.innerHTML === '') {
-        const sortedItems = dayItems.sort((a, b) => b.AutoID - a.AutoID);
-        sortedItems.forEach(item => {
-          const itemElement = formatItemDisplay(item, color);
-          dayContent.appendChild(itemElement);
-        });
-      }
-      dayContent.style.display = isHidden ? 'block' : 'none';
-      dayHeader.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
-    };
-
-    dayDiv.appendChild(dayHeader);
-    dayDiv.appendChild(dayContent);
-    return dayDiv;
-  }
-
   function formatItemDisplay(item, color) {
     const itemDiv = document.createElement('div');
-    itemDiv.style.cssText = 'font-size: 13px; color: #333; padding: 6px 10px; margin: 3px 0; background: #fff; border-radius: 4px; border-left: 3px solid ' + color + '; line-height: 1.2; font-family: monospace;';
+    itemDiv.style.cssText = 'font-size: 13px; color: #333; padding: 4px 8px; margin: 2px 0; background: #fff; border-radius: 3px; border-left: 2px solid ' + color + '; line-height: 1.4;';
 
     const itemContainer = document.createElement('div');
-    itemContainer.style.cssText = 'display: flex; align-items: center; gap: 12px;';
+    itemContainer.style.cssText = 'display: flex; align-items: center; gap: 10px;';
 
     const idPart = document.createElement('span');
-    idPart.style.cssText = 'min-width: 70px; font-weight: 600; color: #007baf;';
-    idPart.textContent = `ID:${item.AutoID}`;
+    idPart.style.cssText = 'min-width: 55px; font-weight: 600; color: #007baf; font-family: monospace;';
+    idPart.textContent = `#${item.AutoID}`;
 
     const namePart = document.createElement('span');
     namePart.style.cssText = 'flex: 1; font-weight: 500; word-wrap: break-word;';
     namePart.textContent = item.Name;
 
     const statusPart = document.createElement('span');
-    statusPart.style.cssText = 'min-width: 80px; font-weight: 600; text-align: center;';
+    statusPart.style.cssText = 'min-width: 70px; font-weight: 600; text-align: center; font-size: 12px;';
     statusPart.innerHTML = app.ITEM_STATUS_SYSTEM.generateStatusHTML(item.IsPay, item.IsGet);
 
     const bidPart = document.createElement('span');
-    bidPart.style.cssText = 'min-width: 200px; font-size: 12px; white-space: nowrap;';
+    bidPart.style.cssText = 'min-width: 180px; font-size: 12px; white-space: nowrap;';
     bidPart.innerHTML = app.BID_STATUS_SYSTEM.generateBidDisplay(item, 'inline');
 
     app.BID_STATUS_SYSTEM.applyContainerStyle(itemDiv, item);
