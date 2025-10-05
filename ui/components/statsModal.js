@@ -275,6 +275,19 @@
     return itemDiv;
   }
 
+  function countItemsWithWinner(monthData) {
+    let count = 0;
+    Object.keys(monthData).forEach(day => {
+      monthData[day].forEach(item => {
+        // 判斷有得標者: WinnerID 存在，或競標中 (HasBids=true 且有 Bidder)
+        if (item.WinnerID || (item.HasBids === true && item.Bidder)) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }
+
   function generateQuarterlyView(dateData, title, color) {
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f9fa;';
@@ -282,6 +295,10 @@
     const header = document.createElement('div');
     header.style.cssText = `background: ${color}; color: white; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 7px 7px 0 0;`;
     header.textContent = title;
+
+    const quarterInfo = document.createElement('div');
+    quarterInfo.style.cssText = 'padding: 10px 15px; background: #fff3cd; border-bottom: 1px solid #e0e0e0; font-size: 13px; color: #856404;';
+    quarterInfo.innerHTML = '📋 季度劃分: <strong>Q1(3-4月)</strong> | <strong>Q2(5-7月)</strong> | <strong>Q3(8-10月)</strong> | <strong>Q4(11-2月)</strong>';
 
     const content = document.createElement('div');
     content.style.cssText = 'padding: 20px;';
@@ -337,7 +354,18 @@
 
         const monthCount = document.createElement('div');
         monthCount.style.cssText = `font-size: 20px; font-weight: bold; color: ${color};`;
-        monthCount.textContent = `${monthTotal}筆`;
+
+        // 如果是「競標結束時間分布」，額外顯示得標者數量
+        if (title.includes('競標結束')) {
+          const winnerCount = countItemsWithWinner(monthData);
+          if (winnerCount > 0) {
+            monthCount.innerHTML = `${monthTotal}筆<br><span style="font-size: 14px; color: #666; font-weight: normal;">(${winnerCount}筆得標)</span>`;
+          } else {
+            monthCount.textContent = `${monthTotal}筆`;
+          }
+        } else {
+          monthCount.textContent = `${monthTotal}筆`;
+        }
 
         monthBox.appendChild(monthLabel);
         monthBox.appendChild(monthCount);
@@ -349,6 +377,12 @@
     });
 
     section.appendChild(header);
+
+    // 只在「建立時間分布」顯示季度說明
+    if (title.includes('建立時間')) {
+      section.appendChild(quarterInfo);
+    }
+
     section.appendChild(content);
     return section;
   }
