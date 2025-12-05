@@ -17,10 +17,11 @@
       secondary: 'background:#6c757d;color:white;',
       warning: 'background:#ffc107;color:#212529;',
       purple: 'background:#6f42c1;color:white;',
+      info: 'background:#667eea;color:white;',
       small: 'padding:5px 10px;font-size:11px;'
     },
     panel: {
-      base: 'position:fixed;top:80px;right:0;width:320px;height:calc(100% - 100px);overflow-y:auto;background:white;border-left:2px solid #007baf;box-shadow:-2px 0 5px rgba(0,0,0,0.2);font-family:"Segoe UI","Noto Sans TC",sans-serif;z-index:99999;',
+      base: 'position:fixed;top:80px;right:0;width:450px;height:calc(100% - 100px);overflow-y:auto;background:white;border-left:2px solid #007baf;box-shadow:-2px 0 5px rgba(0,0,0,0.2);font-family:"Segoe UI","Noto Sans TC",sans-serif;z-index:99999;',
       wide: 'width:400px;',
       header: 'margin:0;background:#007baf;color:white;padding:12px;font-size:16px;display:flex;justify-content:space-between;'
     },

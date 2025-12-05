@@ -56,7 +56,13 @@
           <button id="save-webhook-btn" style="${app.applyComponentVariant('button', 'default', 'primary')}">儲存</button>
         </div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;"><button id="test-webhook-btn" style="${app.applyComponentVariant('button', 'fullWidth', 'success')}">測試連線</button></div>
-        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;"><button id="open-files-page-btn" style="${app.applyComponentVariant('button', 'fullWidth', 'purple')}">🔗 開啟 Files.php</button></div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;"><button id="open-files-page-btn" style="${app.applyComponentVariant('button', 'fullWidth', 'purple')}">開啟 Files.php</button></div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;">
+          <button id="open-official-site-btn" style="${app.applyComponentVariant('button', 'fullWidth', 'info')}">官方發布網頁</button>
+        </div>
+        <div style="margin-top:10px;">
+          <button id="open-github-btn" style="${app.applyComponentVariant('button', 'fullWidth', 'secondary')}">GitHub 專案頁面</button>
+        </div>
       </div>`;
     document.body.appendChild(panel);
     document.getElementById('close-settings-panel').onclick = () => panel.remove();
@@ -64,6 +70,8 @@
     document.getElementById('reset-webhook-btn').onclick = () => { document.getElementById('webhook-url-input').value = DEFAULT_WEBHOOK_URL; saveWebhookSetting(DEFAULT_WEBHOOK_URL); app.showNotification('已重置為預設值', 'success'); };
     document.getElementById('test-webhook-btn').onclick = () => { const url = document.getElementById('webhook-url-input').value.trim(); if(isValidUrl(url)) testWebhookConnection(url); else app.showNotification('請輸入有效的網址格式', 'error'); };
     document.getElementById('open-files-page-btn').onclick = () => { const url = new URL(getCurrentWebhookUrl()); window.open(`${url.protocol}//${url.host}${url.pathname}`, '_blank'); };
+    document.getElementById('open-official-site-btn').onclick = () => { window.open('https://580.blias.com/install/', '_blank'); };
+    document.getElementById('open-github-btn').onclick = () => { window.open('https://github.com/AnimeggUnity/furniture-helper', '_blank'); };
   }
 
   app.showSettingsPanel = showSettingsPanel;

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "新北再生家具 - 年度統計",
-  "version": "1.0",
-  "description": "統計再生家具網站每月/每年資料筆數，支援資料匯出與 JSON 匯入",
+  "name": "新北再生家具競標管理工具",
+  "version": "4.1.1",
+  "description": "新北市再生家具拍賣網進階管理工具 - 統計分析、列印表格、批次操作、JSON 匯入匯出",
   "icons": {
     "128": "icon.png"
   },

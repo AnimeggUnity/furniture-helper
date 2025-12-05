@@ -6,7 +6,7 @@
    * @returns {string} 競標狀態HTML
    */
   function getBidStatusHTML(item) {
-    return app.BID_STATUS_SYSTEM.generateBidDisplay(item, 'block');
+    return app.BID_STATUS_SYSTEM.generateBidDisplay(item, 'inline');
   }
 
   function buildPanel(data = []) {
@@ -250,9 +250,9 @@
 
       const downloadBtn = document.createElement('button');
       downloadBtn.className = 'download-btn';
-      downloadBtn.style.cssText = app.applyComponentVariant('button', 'default', 'success');
+      downloadBtn.style.cssText = app.applyComponentVariant('button', 'default', 'success') + 'width: 20px; padding: 4px;';
       downloadBtn.dataset.index = i;
-      downloadBtn.textContent = 'DL';
+      downloadBtn.innerHTML = '&nbsp;';
       downloadBtn.onclick = () => {
         const { Photos, ...restOfItem } = item;
         const blob = new Blob([JSON.stringify(restOfItem, null, 2)], { type: 'application/json' });
@@ -277,8 +277,21 @@
       topRow.appendChild(buttonContainer);
 
       const bottomRow = document.createElement('div');
-      bottomRow.style.cssText = 'color: #666; font-size: 13px; margin-top: 4px;';
-      bottomRow.innerHTML = `ID: ${item.AutoID} | 日期: ${(item.CreateDate || '').split('T')[0]} ${getBidStatusHTML(item)}`;
+      bottomRow.style.cssText = 'color: #666; font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+
+      // 構建資訊陣列
+      const trackCountText = item.TrackCount > 0
+        ? `<span style="color: #dc3545; font-weight: 600;">追蹤: ${item.TrackCount}</span>`
+        : `追蹤: 0`;
+
+      const infoItems = [
+        `ID: ${item.AutoID}`,
+        `日期: ${(item.CreateDate || '').split('T')[0] || '無'}`,
+        trackCountText,
+        getBidStatusHTML(item)
+      ];
+
+      bottomRow.innerHTML = infoItems.join(' | ');
 
       div.appendChild(topRow);
       div.appendChild(bottomRow);

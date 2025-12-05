@@ -40,6 +40,15 @@
         icon: '🏆',
         displayMode: 'detailed',
         prefix: '已結束'
+      },
+      won: {
+        // 已得標（有 WinnerID）
+        text: '',  // 動態生成
+        color: '#155724',
+        background: '#d4edda',
+        icon: '✓',
+        displayMode: 'detailed',
+        prefix: '已得標'
       }
     },
 
@@ -59,6 +68,11 @@
         return 'noBids';
       }
 
+      // 已得標（優先判斷）- 有 WinnerID 代表已確定得標
+      if (item.WinnerID) {
+        return 'won';
+      }
+
       // 有競標且有價格
       if (item.HasBids === true && item.BidPrice) {
         // 檢查是否已結束：EndDate < 現在時間
@@ -66,7 +80,7 @@
           const endDate = new Date(item.EndDate);
           const now = new Date();
           if (endDate < now) {
-            return 'ended';  // 競標已結束
+            return 'ended';  // 競標已結束但無得標者
           }
         }
         return 'bidding';  // 競標進行中
@@ -79,26 +93,25 @@
     /**
      * 格式化出價者顯示名稱 - 消除嵌套條件分支
      * @param {Object} item - 商品物件
+     * @param {string} state - 當前狀態
      * @returns {string} 格式化的顯示名稱
      */
-    formatBidderName(item) {
-      const { NickName, Bidder } = item;
+    formatBidderName(item, state) {
+      // 已得標狀態：優先使用 NickName + WinnerID
+      if (state === 'won') {
+        const { NickName, WinnerID, Account } = item;
 
-      // 使用查找表而非 if/else 巢狀
-      const nameFormats = {
-        'both': () => `${NickName}(${Bidder})`,      // 有暱稱有ID
-        'nickname': () => NickName,                  // 只有暱稱
-        'bidder': () => Bidder,                      // 只有ID
-        'none': () => '匿名出價者'                    // 都沒有
-      };
+        if (NickName && Account) return `${NickName}(${Account})`;
+        if (NickName && WinnerID) return `${NickName}(${WinnerID})`;
+        if (NickName) return NickName;
+        if (Account) return Account;
+        if (WinnerID) return `ID: ${WinnerID}`;
+        return '得標者';
+      }
 
-      // 決定使用哪種格式
-      let formatKey = 'none';
-      if (NickName && Bidder) formatKey = 'both';
-      else if (NickName) formatKey = 'nickname';
-      else if (Bidder) formatKey = 'bidder';
-
-      return nameFormats[formatKey]();
+      // 競標中/已結束狀態：使用 Bidder
+      const { Bidder } = item;
+      return Bidder || '出價者';
     },
 
     /**
@@ -119,14 +132,18 @@
           : `<br><span style="${style}">${config.text}</span>`;
       }
 
-      // 詳細狀態：bidding, ended
-      const bidderName = this.formatBidderName(item);
+      // 詳細狀態：bidding, ended, won
+      const bidderName = this.formatBidderName(item, state);
       const priceStyle = `color:${config.color};font-weight:600;`;
-      const nameStyle = `color:#666;`;
       const statusPrefix = config.prefix || '';
 
       if (displayType === 'inline') {
-        return `<span style="${priceStyle}">${item.BidPrice}元</span><span style="${nameStyle}"> / ${bidderName}</span>`;
+        // 已得標狀態顯示格式：結標 + 價格 + 得標者
+        if (state === 'won') {
+          return `<span style="${priceStyle}">結標 ${item.BidPrice || '未知'}元 / ${bidderName}</span>`;
+        }
+        // 競標中/已結束狀態：競標 + 價格 + 出價者
+        return `<span style="${priceStyle}">競標 ${item.BidPrice}元 / ${bidderName}</span>`;
       } else {
         const bgColor = state === 'ended' ? '#d4edda' : '#ffebee';
         return `<br><span style="background-color:${bgColor};padding:2px 4px;border-radius:3px;">${statusPrefix} - 最高競標價: ${item.BidPrice} 元<br>最高出價者: ${bidderName}</span>`;
