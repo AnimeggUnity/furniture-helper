@@ -279,6 +279,16 @@
       const bottomRow = document.createElement('div');
       bottomRow.style.cssText = 'color: #666; font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
 
+      // 日期格式化函數：只顯示月/日
+      const formatMonthDay = (dateStr) => {
+        if (!dateStr) return '無';
+        const parts = dateStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+          return `${parts[1]}/${parts[2]}`;
+        }
+        return '無';
+      };
+
       // 構建資訊陣列
       const trackCountText = item.TrackCount > 0
         ? `<span style="color: #dc3545; font-weight: 600;">追蹤: ${item.TrackCount}</span>`
@@ -286,7 +296,8 @@
 
       const infoItems = [
         `ID: ${item.AutoID}`,
-        `日期: ${(item.CreateDate || '').split('T')[0] || '無'}`,
+        `建立: ${formatMonthDay(item.CreateDate)}`,
+        `結束: ${formatMonthDay(item.EndDate)}`,
         trackCountText,
         getBidStatusHTML(item)
       ];
