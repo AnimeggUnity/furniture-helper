@@ -74,9 +74,23 @@
       updateSelectedCount();
     };
 
+    // 列印按鈕
+    const printBtn = document.createElement('button');
+    printBtn.textContent = '列印';
+    printBtn.style.cssText = app.applyComponentVariant('button', 'default', 'primary') + 'font-size: 12px; padding: 4px 10px;';
+    printBtn.onclick = () => {
+      const selectedItems = getSelectedItems();
+      if (selectedItems.length === 0) {
+        app.showNotification('請至少選擇一個項目', 'warning');
+        return;
+      }
+      printSelectedItems(selectedItems);
+    };
+
     selectAllContainer.appendChild(selectAllBtn);
     selectAllContainer.appendChild(selectNoneBtn);
     selectAllContainer.appendChild(selectNoBidsBtn);
+    selectAllContainer.appendChild(printBtn);
 
     const selectedCountSpan = document.createElement('div');
     selectedCountSpan.id = 'selected-count';
@@ -140,6 +154,105 @@
         selectedItems.push(data[itemIndex]);
       });
       return selectedItems;
+    }
+
+    function printSelectedItems(items) {
+      // 構建列印內容
+      let printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>列印家具清單</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 8px; margin: 0; }
+            h1 { text-align: center; color: #007baf; margin: 8px 0 12px 0; font-size: 18px; }
+            .container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .item {
+              page-break-inside: avoid;
+              border: 1px solid #ddd;
+              padding: 8px;
+              background: #fff;
+              min-height: 145px;
+            }
+            .item-header {
+              font-size: 13px;
+              font-weight: bold;
+              margin-bottom: 4px;
+              color: #007baf;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .item-info { font-size: 11px; color: #666; margin-bottom: 6px; }
+            .photos { display: flex; gap: 6px; justify-content: center; }
+            .photo-wrapper { text-align: center; flex: 1; }
+            .photo-wrapper img {
+              width: 100%;
+              max-width: 120px;
+              height: 95px;
+              object-fit: cover;
+              border: 1px solid #ddd;
+              border-radius: 3px;
+            }
+            .photo-label { font-size: 9px; color: #999; margin-top: 2px; }
+            .no-photos { color: #999; font-style: italic; font-size: 11px; text-align: center; }
+            @media print {
+              body { padding: 5px; }
+              .item { page-break-inside: avoid; }
+              @page { margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>家具清單</h1>
+          <div class="container">
+      `;
+
+      items.forEach(item => {
+        printContent += `
+          <div class="item">
+            <div class="item-header">${item.Name || '未命名'}</div>
+            <div class="item-info">編號: ${item.AutoID}</div>
+            <div class="photos">
+        `;
+
+        // 取前兩張照片
+        if (item.Photos && Array.isArray(item.Photos) && item.Photos.length > 0) {
+          const photosToShow = item.Photos.slice(0, 2);
+          photosToShow.forEach((photo, index) => {
+            const photoUrl = photo.Photo.startsWith('http') ? photo.Photo : location.origin + photo.Photo;
+            printContent += `
+              <div class="photo-wrapper">
+                <img src="${photoUrl}" alt="照片 ${index + 1}">
+                <div class="photo-label">照片 ${index + 1}</div>
+              </div>
+            `;
+          });
+        } else {
+          printContent += `<div class="no-photos">無照片</div>`;
+        }
+
+        printContent += `
+            </div>
+          </div>
+        `;
+      });
+
+      printContent += `
+          </div>
+        </body>
+        </html>
+      `;
+
+      // 開啟新視窗並列印
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+      };
     }
 
     const searchInput = document.createElement('input');
