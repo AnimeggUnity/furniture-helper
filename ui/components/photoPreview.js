@@ -10,7 +10,7 @@
       modal.innerHTML = `
         <span style="${app.UI_COMPONENTS.closeButton.base}color:#666;"
               onclick="this.parentNode.style.display='none'">X</span>
-        <h3 style="margin-top:0; margin-bottom:20px; color:#007baf; font-size:20px;">圖片預覽</h3>
+        <h3 style="margin-top:0; margin-bottom:20px; color:#4A90E2; font-size:20px;">圖片預覽</h3>
         <div id="photo-preview-container" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;"></div>
       `;
       document.body.appendChild(modal);

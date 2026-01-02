@@ -52,14 +52,14 @@
       IMAGE_QUALITY: 0.8                      // 圖片壓縮品質
     },
 
-    // 顏色常數（語義化）
+    // 顏色常數（語義化）- 現代扁平風
     COLORS: {
-      PRIMARY: '#007baf',                     // 主色調
-      SUCCESS: '#28a745',                     // 成功色
-      WARNING: '#ffc107',                     // 警告色
-      DANGER: '#dc3545',                      // 危險色
-      INFO: '#667eea',                        // 資訊色
-      SECONDARY: '#6c757d',                   // 次要色
+      PRIMARY: '#4A90E2',                     // 主色調（柔和藍）
+      SUCCESS: '#5CB85C',                     // 成功色（柔和綠）
+      WARNING: '#FFB74D',                     // 警告色（柔和橙）
+      DANGER: '#E57373',                      // 危險色（柔和紅）
+      INFO: '#64B5F6',                        // 資訊色（柔和亮藍）
+      SECONDARY: '#9E9E9E',                   // 次要色（柔和灰）
       TEXT_MUTED: '#666'                      // 文字淡色
     },
 

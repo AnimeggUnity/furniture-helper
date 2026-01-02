@@ -214,7 +214,7 @@
               <span>覆寫競標日期</span>
             </label>
           </div>
-          <div id="date-override-options" style="display: none; padding-left: 10px; border-left: 3px solid #007baf;">
+          <div id="date-override-options" style="display: none; padding-left: 10px; border-left: 3px solid #4A90E2;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
               <span style="font-size: 14px; color: #495057;">競標</span>
               <input type="number" id="batch-auction-duration" value="14" min="1" max="90"
@@ -691,7 +691,7 @@
 
   function createCancellableProgress(title) {
     const div = document.createElement('div');
-    div.innerHTML = `<div class="progress-modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10000;min-width:300px;text-align:center;"><h3 style="margin:0 0 15px 0;color:#007baf;">處理中: ${title}</h3><div class="progress-bar" style="width:100%;height:20px;background:#f0f0f0;border-radius:10px;margin:15px 0;overflow:hidden;"><div class="progress-fill" style="height:100%;background:#007baf;width:0%;transition:width 0.3s;"></div></div><p class="progress-text" style="margin:10px 0;font-size:14px;color:#666;">準備中...</p><button class="cancel-btn" onclick="this.parentElement.parentElement.remove()" style="background:#dc3545;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;margin-top:10px;font-size:12px;">取消</button></div>`;
+    div.innerHTML = `<div class="progress-modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10000;min-width:300px;text-align:center;"><h3 style="margin:0 0 15px 0;color:#4A90E2;">處理中: ${title}</h3><div class="progress-bar" style="width:100%;height:20px;background:#f0f0f0;border-radius:10px;margin:15px 0;overflow:hidden;"><div class="progress-fill" style="height:100%;background:#4A90E2;width:0%;transition:width 0.3s;"></div></div><p class="progress-text" style="margin:10px 0;font-size:14px;color:#666;">準備中...</p><button class="cancel-btn" onclick="this.parentElement.parentElement.remove()" style="background:#E57373;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;margin-top:10px;font-size:12px;">取消</button></div>`;
     document.body.appendChild(div);
     return div;
   }

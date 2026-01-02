@@ -14,9 +14,72 @@
     const existingPanel = document.getElementById(panelId);
     if (existingPanel) existingPanel.remove();
 
+    // 移除舊的拖曳邊框 (如果存在)
+    const existingHandle = document.getElementById('furniture-panel-resize-handle');
+    if (existingHandle) existingHandle.remove();
+
+    // 讀取儲存的寬度偏好
+    const savedWidth = localStorage.getItem('furniture-panel-width') || '450';
+    const panelWidth = Math.max(350, Math.min(800, parseInt(savedWidth)));
+
     const newPanel = document.createElement('div');
     newPanel.id = panelId;
-    newPanel.style.cssText = app.applyComponentVariant('panel', 'default');
+    newPanel.style.cssText = app.applyComponentVariant('panel', 'default') + `width: ${panelWidth}px;`;
+
+    // 建立拖曳邊框
+    const resizeHandle = document.createElement('div');
+    resizeHandle.id = 'furniture-panel-resize-handle';
+    resizeHandle.style.cssText = `
+      position: fixed;
+      right: ${panelWidth - 5}px;
+      top: 80px;
+      width: 5px;
+      height: calc(100% - 100px);
+      cursor: ew-resize;
+      background: transparent;
+      z-index: 100000;
+    `;
+    resizeHandle.title = '拖曳調整寬度 | 雙擊重置';
+
+    // 拖曳邏輯
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = newPanel.offsetWidth;
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const deltaX = startX - e.clientX; // 反向,因為 panel 在右側
+      const newWidth = Math.max(350, Math.min(800, startWidth + deltaX));
+      newPanel.style.width = `${newWidth}px`;
+      resizeHandle.style.right = `${newWidth - 5}px`; // 同步更新拖曳邊框位置
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        // 儲存寬度偏好
+        localStorage.setItem('furniture-panel-width', newPanel.offsetWidth);
+      }
+    });
+
+    // 雙擊重置
+    resizeHandle.addEventListener('dblclick', () => {
+      newPanel.style.width = '450px';
+      resizeHandle.style.right = '445px'; // 450 - 5
+      localStorage.setItem('furniture-panel-width', '450');
+      app.showNotification('Panel 寬度已重置為 450px', 'info');
+    });
 
     const header = document.createElement('h2');
     header.style.cssText = app.UI_COMPONENTS.panel.header;
@@ -28,7 +91,10 @@
     closeButton.id = 'close-panel';
     closeButton.textContent = 'X';
     closeButton.style.cssText = 'background: none; border: none; color: white; font-size: 16px; cursor: pointer;';
-    closeButton.onclick = () => newPanel.remove();
+    closeButton.onclick = () => {
+      newPanel.remove();
+      resizeHandle.remove();
+    };
 
     header.appendChild(titleSpan);
     header.appendChild(closeButton);
@@ -167,7 +233,7 @@
           <style>
             * { box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 8px; margin: 0; }
-            h1 { text-align: center; color: #007baf; margin: 8px 0 12px 0; font-size: 18px; }
+            h1 { text-align: center; color: #4A90E2; margin: 8px 0 12px 0; font-size: 18px; }
             .container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
             .item {
               page-break-inside: avoid;
@@ -180,7 +246,7 @@
               font-size: 13px;
               font-weight: bold;
               margin-bottom: 4px;
-              color: #007baf;
+              color: #4A90E2;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -272,7 +338,7 @@
       if (targetItem) {
         app.safeScrollIntoView(targetItem, { behavior: 'smooth', block: 'center' });
         targetItem.style.background = '#e6f3ff';
-        setTimeout(() => { if(targetItem) targetItem.style.background = ''; }, app.APP_CONSTANTS.TIMING.HIGHLIGHT_RESET_DELAY);
+        setTimeout(() => { if (targetItem) targetItem.style.background = ''; }, app.APP_CONSTANTS.TIMING.HIGHLIGHT_RESET_DELAY);
       }
     };
     newPanel.appendChild(searchInput);
@@ -357,7 +423,7 @@
         } finally {
           packageBtn.textContent = 'PACK';
           packageBtn.disabled = false;
-          packageBtn.style.background = '#007baf';
+          packageBtn.style.background = '#4A90E2';
         }
       };
 
@@ -390,7 +456,7 @@
       topRow.appendChild(buttonContainer);
 
       const bottomRow = document.createElement('div');
-      bottomRow.style.cssText = 'color: #666; font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+      bottomRow.style.cssText = 'color: #666; font-size: 13px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis;';
 
       // 日期格式化函數：只顯示月/日
       const formatMonthDay = (dateStr) => {
@@ -412,6 +478,7 @@
         `建立: ${formatMonthDay(item.CreateDate)}`,
         `結束: ${formatMonthDay(item.EndDate)}`,
         trackCountText,
+        app.ITEM_STATUS_SYSTEM.generateStatusHTML(item.IsPay, item.IsGet),
         getBidStatusHTML(item)
       ];
 
@@ -424,6 +491,7 @@
 
     updateSelectedCount();
     document.body.appendChild(newPanel);
+    document.body.appendChild(resizeHandle); // 附加到 body,確保 fixed 定位正確
   }
 
   app.buildPanel = buildPanel;

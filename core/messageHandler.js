@@ -41,7 +41,7 @@
     const spinner = document.createElement('div');
     spinner.style.cssText = `
       border: 8px solid #f3f3f3;
-      border-top: 8px solid #007baf;
+      border-top: 8px solid #4A90E2;
       border-radius: 50%;
       width: 60px;
       height: 60px;
@@ -260,7 +260,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #007baf;
+            background: #4A90E2;
             color: white;
             padding: 10px 15px;
             border-radius: 5px;

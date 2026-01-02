@@ -41,7 +41,7 @@
 
       if (mode === 'quarterly') {
         if (hierarchicalStats.createDate) {
-          const createDateSection = generateQuarterlyView(hierarchicalStats.createDate, '📅 建立時間分布', '#007baf');
+          const createDateSection = generateQuarterlyView(hierarchicalStats.createDate, '📅 建立時間分布', '#4A90E2');
           container.appendChild(createDateSection);
         }
 
@@ -51,7 +51,7 @@
         }
       } else {
         if (hierarchicalStats.createDate) {
-          const createDateSection = createStatsTree(hierarchicalStats.createDate, '📅 建立時間分布 (CreateDate)', '#007baf');
+          const createDateSection = createStatsTree(hierarchicalStats.createDate, '📅 建立時間分布 (CreateDate)', '#4A90E2');
           container.appendChild(createDateSection);
         }
 
@@ -246,7 +246,7 @@
     itemContainer.style.cssText = 'display: flex; align-items: center; gap: 10px;';
 
     const idPart = document.createElement('span');
-    idPart.style.cssText = 'min-width: 55px; font-weight: 600; color: #007baf; font-family: monospace;';
+    idPart.style.cssText = 'min-width: 55px; font-weight: 600; color: #4A90E2; font-family: monospace;';
     idPart.textContent = `#${item.AutoID}`;
 
     const namePart = document.createElement('span');
