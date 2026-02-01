@@ -11,6 +11,8 @@
   async function uploadImage(imageFile) {
     const apiUrl = 'https://recycledstuff.ntpc.gov.tw/BidMgr/api/Product/UploadFile';
 
+    console.log(`🖼️ 開始上傳圖片: ${imageFile.name} (${(imageFile.size / 1024).toFixed(1)}KB)`);
+
     const formData = new FormData();
     formData.append('file', imageFile, imageFile.name);
 
@@ -22,13 +24,16 @@
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`❌ 圖片上傳失敗: ${response.status} ${response.statusText}`);
         throw new Error(`伺服器錯誤: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log(`✅ 圖片上傳成功:`, result);
       return result;
 
     } catch (error) {
+      console.error(`❌ 圖片上傳例外:`, error);
       throw error; // 將錯誤向上拋出，以便呼叫者可以處理
     }
   }
@@ -56,8 +61,10 @@
       if (jsonData.Photos && Array.isArray(jsonData.Photos) && jsonData.Photos.length > 0) {
         const hasBase64Images = jsonData.Photos.some(photo => photo.Photo && photo.Photo.startsWith('data:image'));
         if (hasBase64Images) {
+          console.log(`📸 偵測到 ${jsonData.Photos.length} 張 Base64 圖片，開始上傳...`);
           const uploadedPhotos = await uploadImagesWithCorrectAPI(jsonData.Photos);
           payload.Photos = uploadedPhotos.map(photo => ({ Photo: photo.uploadedUrl }));
+          console.log(`📸 所有圖片上傳完成，URLs:`, payload.Photos);
         } else {
           payload.Photos = jsonData.Photos;
         }
@@ -70,9 +77,25 @@
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      // 檢查回應的 Content-Type
+      const contentType = response.headers.get('content-type');
+      console.log(`📥 伺服器回應: status=${response.status}, content-type=${contentType}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ API 錯誤回應 (${response.status}):`, errorText.substring(0, 500));
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // 檢查是否真的是 JSON
+      if (!contentType || !contentType.includes('application/json')) {
+        const htmlText = await response.text();
+        console.error(`❌ 伺服器返回非 JSON 格式 (${contentType}):`, htmlText.substring(0, 500));
+        throw new Error(`伺服器返回非 JSON 格式: ${htmlText.substring(0, 200)}`);
+      }
+
       const result = await response.json();
-      console.log('API 送出成功:', result);
+      console.log('✅ API 送出成功:', result);
 
       setTimeout(() => {
         if (app.isStatsTriggered()) {

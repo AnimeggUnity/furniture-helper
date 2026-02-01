@@ -407,6 +407,11 @@
       let previousState = null; // 追蹤前一個項目的狀態
 
       sortedData.forEach((item, i) => {
+        // 如果是按得標者排序且已領，直接隱藏該項目
+        if (isSortedByWinner && item.IsGet) {
+          return; // 跳過已領的項目
+        }
+
         // 如果是按得標者排序，添加狀態分隔線
         if (isSortedByWinner) {
           const hasWinner = !!(item.WinnerID || item.NickName);
