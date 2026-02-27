@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "新北再生家具競標管理工具",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "新北市再生家具拍賣網進階管理工具 - 現代扁平風 UI、統計分析、列印表格、批次操作、JSON 匯入匯出",
   "icons": {
     "128": "icon.png"
@@ -25,6 +25,7 @@
         "utils/image.js",
         "utils/csv.js",
         "utils/api.js",
+        "utils/sheetSync.js",
         "ui/components/statsModal.js",
         "ui/components/photoPreview.js",
         "ui/components/importModal.js",
