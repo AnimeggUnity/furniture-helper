@@ -620,3 +620,51 @@
 
   app.buildPanel = buildPanel;
 })(window.FurnitureHelper = window.FurnitureHelper || {});
+    let isOverdueUnpaidOnly = false; // 逾期未付過濾狀態
+    // 逾期未付按鈕
+    const overdueUnpaidBtn = document.createElement('button');
+    overdueUnpaidBtn.textContent = '逾期未付';
+    overdueUnpaidBtn.style.cssText = app.applyComponentVariant('button', 'default', 'secondary') + 'font-size: 12px; padding: 4px 10px;';
+    overdueUnpaidBtn.onclick = () => {
+      isOverdueUnpaidOnly = !isOverdueUnpaidOnly;
+      overdueUnpaidBtn.textContent = isOverdueUnpaidOnly ? '顯示全部' : '逾期未付';
+      overdueUnpaidBtn.style.cssText = app.applyComponentVariant('button', 'default', isOverdueUnpaidOnly ? 'primary' : 'secondary') + 'font-size: 12px; padding: 4px 10px;';
+      renderItems();
+    };
+
+      const parseDate = (dateStr) => {
+        if (!dateStr) return null;
+        const dateOnly = dateStr.split('T')[0];
+        const parts = dateOnly.split('-');
+        if (parts.length !== 3) return null;
+        const year = Number(parts[0]);
+        const month = Number(parts[1]);
+        const day = Number(parts[2]);
+        if (!year || !month || !day) return null;
+        return new Date(year, month - 1, day);
+      };
+
+      const isOverdueUnpaid = (item) => {
+        const hasWinner = !!(item.WinnerID || item.NickName);
+        if (!hasWinner) return false;
+        if (item.IsPay !== false) return false;
+        const endDate = parseDate(item.EndDate);
+        if (!endDate) return false;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 14);
+        cutoff.setHours(0, 0, 0, 0);
+        return endDate < cutoff;
+      };
+
+      if (isOverdueUnpaidOnly) {
+        sortedData = sortedData.filter(isOverdueUnpaid);
+      }
+      if (sortedData.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.textContent = '無符合條件的逾期未付項目';
+        emptyMessage.style.cssText = 'padding: 16px 10px; color: #6c757d; font-size: 13px; text-align: center;';
+        itemsContainer.appendChild(emptyMessage);
+        updateSelectedCount();
+        return;
+      }
+
