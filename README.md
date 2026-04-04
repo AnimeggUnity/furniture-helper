@@ -68,6 +68,8 @@
 - **得標者分組功能** - 一鍵切換得標者分組模式，固定客戶購買記錄一目了然 🆕
 - **三層智能排序** - 已得標 > 競標中 > 無競標，自動優先顯示重要項目 🆕
 - **逾期未付篩選** - 只顯示「已得標 + 未付 + 結束超過 14 天」的項目 🆕
+- **長期未結標篩選** - 篩選競標期 ≥20 天的物件，分「競標中（距截標 >7天）」與「無人競標」兩區塊顯示 🆕
+- **刷新截標日功能** - 批次將已選物件的截標日更新為今天 +7 天，需確認後執行 🆕
 - **極簡視覺分隔** - 藍/橙/灰三色分隔線，零冗餘設計 🆕
 - **多模式選擇機制** - 支援「全選」、「全不選」、「只選無競標」三種快速選擇模式
 - **競標狀態智能顯示** - 自動區分「競標中」和「已結束」狀態，並以不同顏色標示
@@ -112,7 +114,7 @@
 - **`notifications.js`**: `showNotification` 函數，提供統一的通知外觀。
 - **`buttons.js`**: `insertButtons` 函數，負責將所有功能按鈕注入到頁面中。
 - **`components/`**:
-    - **`dataPanel.js`**: `buildPanel` 函數，建立側邊資料面板，包含搜尋、得標者分組、聯絡人同步、三模式選擇按鈕（全選/全不選/只選無競標）、批次操作等功能。自動顯示得標者聯絡方式（👤姓名、📞電話、📧Email）。🆕
+    - **`dataPanel.js`**: `buildPanel` 函數，建立側邊資料面板，包含搜尋、得標者分組、聯絡人同步、三模式選擇按鈕（全選/全不選/只選無競標）、批次操作等功能。自動顯示得標者聯絡方式（👤姓名、📞電話、📧Email）。支援長期未結標篩選與批次刷新截標日。🆕
     - **`statsModal.js`**: `showHierarchicalModal` 函數，建立階層式統計資料的互動式樹狀圖（年/月兩層級，日期優先排序，延遲載入）。🆕
     - **`importModal.js`**: 處理本地和遠端匯入的 UI 和邏輯。
     - **`deleteModal.js`**: `showDeleteConfirmationModal` 函數，提供批次刪除前的安全確認。
@@ -120,7 +122,7 @@
     - **`settingsPanel.js`**: `showSettingsPanel` 函數，提供 Webhook 設定與聯絡人 API 設定的 UI，支援連線測試功能。
 
 #### `utils/` - 工具函數
-- **`api.js`**: 封裝 `uploadImage`, `directSubmitToAPI` 等與後端 API 的所有互動。
+- **`api.js`**: 封裝 `uploadImage`, `directSubmitToAPI`, `updateProductEndDate` 等與後端 API 的所有互動。
 - **`image.js`**: 提供 `convertImageToBase64`, `base64ToFile` 等圖片處理工具。
 - **`csv.js`**: `exportToCSV` 和 `exportAllToCSV` 匯出功能。
 - **`scroll.js`**: `safeScrollIntoView` 安全滾動函數。

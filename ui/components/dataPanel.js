@@ -211,6 +211,7 @@
     // 得標者分組按鈕
     let isSortedByWinner = false; // 排序狀態
     let isOverdueUnpaidOnly = false; // 逾期未付過濾狀態
+    let isLongAuctionView = false; // 長期未結標篩選狀態
     const sortByWinnerBtn = document.createElement('button');
     sortByWinnerBtn.textContent = '得標者分組';
     sortByWinnerBtn.style.cssText = app.applyComponentVariant('button', 'default', 'secondary') + 'font-size: 12px; padding: 4px 10px;';
@@ -232,12 +233,24 @@
       renderItems();
     };
 
+    // 長期未結標按鈕
+    const longAuctionBtn = document.createElement('button');
+    longAuctionBtn.textContent = '長期未結標';
+    longAuctionBtn.style.cssText = app.applyComponentVariant('button', 'default', 'secondary') + 'font-size: 12px; padding: 4px 10px;';
+    longAuctionBtn.onclick = () => {
+      isLongAuctionView = !isLongAuctionView;
+      longAuctionBtn.textContent = isLongAuctionView ? '顯示全部' : '長期未結標';
+      longAuctionBtn.style.cssText = app.applyComponentVariant('button', 'default', isLongAuctionView ? 'warning' : 'secondary') + 'font-size: 12px; padding: 4px 10px;';
+      renderItems();
+    };
+
     selectAllContainer.appendChild(selectAllBtn);
     selectAllContainer.appendChild(selectNoneBtn);
     selectAllContainer.appendChild(selectNoBidsBtn);
     selectAllContainer.appendChild(printBtn);
     selectAllContainer.appendChild(sortByWinnerBtn);
     selectAllContainer.appendChild(overdueUnpaidBtn);
+    selectAllContainer.appendChild(longAuctionBtn);
 
     const selectedCountSpan = document.createElement('div');
     selectedCountSpan.id = 'selected-count';
@@ -278,9 +291,47 @@
       app.showDeleteConfirmationModal(selectedItems);
     };
 
+    const batchRefreshEndDateBtn = document.createElement('button');
+    batchRefreshEndDateBtn.textContent = '刷新截標日';
+    batchRefreshEndDateBtn.style.cssText = app.applyComponentVariant('button', 'default', 'warning') + 'font-weight: bold;';
+    batchRefreshEndDateBtn.onclick = async () => {
+      const selectedItems = getSelectedItems();
+      if (selectedItems.length === 0) {
+        app.showNotification('請至少選擇一個項目', 'warning');
+        return;
+      }
+      const today = new Date();
+      const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+      const pad = (n) => String(n).padStart(2, '0');
+      const newEndDateDisplay = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+      const confirmed = confirm(`確定要將已選 ${selectedItems.length} 個物件的截標日期更新為「${newEndDateDisplay}」嗎？`);
+      if (!confirmed) return;
+      batchRefreshEndDateBtn.textContent = '刷新中...';
+      batchRefreshEndDateBtn.disabled = true;
+      let successCount = 0;
+      let failCount = 0;
+      for (const item of selectedItems) {
+        try {
+          await app.updateProductEndDate(item);
+          successCount++;
+        } catch (e) {
+          failCount++;
+          console.error(`刷新截標日失敗: ${item.Name}`, e);
+        }
+      }
+      batchRefreshEndDateBtn.textContent = '刷新截標日';
+      batchRefreshEndDateBtn.disabled = false;
+      if (failCount === 0) {
+        app.showNotification(`✅ 已刷新 ${successCount} 個物件的截標日期`, 'success');
+      } else {
+        app.showNotification(`完成：${successCount} 成功，${failCount} 失敗`, 'warning');
+      }
+    };
+
     actionsContainer.appendChild(batchExportBtn);
     actionsContainer.appendChild(batchImportBtn);
     actionsContainer.appendChild(batchDeleteBtn);
+    actionsContainer.appendChild(batchRefreshEndDateBtn);
 
     batchControlsContainer.appendChild(selectAllContainer);
     batchControlsContainer.appendChild(selectedCountSpan);
@@ -487,6 +538,87 @@
         cutoff.setHours(0, 0, 0, 0);
         return endDate < cutoff;
       };
+
+      // 長期未結標篩選模式（20天以上競標期，截標日尚未到）
+      if (isLongAuctionView) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const isLongDuration = (item) => {
+          const start = parseDate(item.StartDate);
+          const end = parseDate(item.EndDate);
+          if (!start || !end) return false;
+          return (end - start) / (1000 * 60 * 60 * 24) >= 20;
+        };
+
+        const biddingItems = data.filter(item => {
+          if (!isLongDuration(item)) return false;
+          const end = parseDate(item.EndDate);
+          if (!end || end <= now) return false;
+          const daysRemaining = (end - now) / (1000 * 60 * 60 * 24);
+          return app.BID_STATUS_SYSTEM.determineState(item) === 'bidding' && daysRemaining > 7;
+        });
+
+        const noBidsItems = data.filter(item => {
+          if (!isLongDuration(item)) return false;
+          const end = parseDate(item.EndDate);
+          if (!end || end <= now) return false;
+          return app.BID_STATUS_SYSTEM.determineState(item) === 'noBids';
+        });
+
+        if (biddingItems.length === 0 && noBidsItems.length === 0) {
+          const emptyMessage = document.createElement('div');
+          emptyMessage.textContent = '無符合條件的長期未結標項目';
+          emptyMessage.style.cssText = 'padding: 16px 10px; color: #6c757d; font-size: 13px; text-align: center;';
+          itemsContainer.appendChild(emptyMessage);
+          updateSelectedCount();
+          return;
+        }
+
+        const renderSection = (items, title, color) => {
+          if (items.length === 0) return;
+          const header = document.createElement('div');
+          header.style.cssText = `padding: 6px 10px; font-size: 12px; font-weight: 600; color: white; background: ${color}; margin-bottom: 4px;`;
+          header.textContent = `${title}（${items.length} 件）`;
+          itemsContainer.appendChild(header);
+
+          items.forEach((item) => {
+            const originalIndex = data.findIndex(d => d.AutoID === item.AutoID);
+            const end = parseDate(item.EndDate);
+            const daysRemaining = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+            const start = parseDate(item.StartDate);
+            const duration = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+            const div = document.createElement('div');
+            div.dataset.autoid = item.AutoID;
+            div.style.cssText = 'padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 13px; display: flex; align-items: center; gap: 8px;';
+
+            const itemCheckbox = document.createElement('input');
+            itemCheckbox.type = 'checkbox';
+            itemCheckbox.className = 'item-checkbox';
+            itemCheckbox.checked = false;
+            itemCheckbox.dataset.itemIndex = originalIndex;
+            itemCheckbox.style.cssText = 'transform: scale(1.1); flex-shrink: 0;';
+            itemCheckbox.onchange = () => updateSelectedCount();
+
+            const info = document.createElement('div');
+            info.style.cssText = 'flex: 1; min-width: 0;';
+            const formatMD = (d) => d ? `${d.getMonth() + 1}/${d.getDate()}` : '無';
+            info.innerHTML = `<strong>${item.Name || '未命名'}</strong> <span style="color:#6c757d">ID:${item.AutoID}</span><br>` +
+              `<span style="color:#888; font-size:12px;">起標 ${formatMD(start)} → 截標 ${formatMD(end)}（${duration}天）｜距截標 ${daysRemaining} 天</span><br>` +
+              getBidStatusHTML(item);
+
+            div.appendChild(itemCheckbox);
+            div.appendChild(info);
+            itemsContainer.appendChild(div);
+          });
+        };
+
+        renderSection(biddingItems, '競標中（距截標 >7天）', '#FF9800');
+        renderSection(noBidsItems, '無人競標', '#9E9E9E');
+        updateSelectedCount();
+        return;
+      }
 
       // 複製並排序資料
       let sortedData = [...data];

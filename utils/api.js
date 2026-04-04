@@ -162,8 +162,25 @@
     return uploaded;
   }
 
+  async function updateProductEndDate(item) {
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+    const pad = (n) => String(n).padStart(2, '0');
+    const newEndDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())} 00:00`;
+    const payload = { ...item, EndDate: newEndDate };
+    console.log(`📅 刷新截標日: ${item.Name} (AutoID: ${item.AutoID}) → ${newEndDate}`);
+    const response = await fetch('/BidMgr/api/Product/UpdateProduct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  }
+
   app.uploadImage = uploadImage;
   app.directSubmitToAPI = directSubmitToAPI;
   app.deleteProductAPI = deleteProductAPI;
   app.uploadImagesWithCorrectAPI = uploadImagesWithCorrectAPI;
+  app.updateProductEndDate = updateProductEndDate;
 })(window.FurnitureHelper = window.FurnitureHelper || {});
