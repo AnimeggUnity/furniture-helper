@@ -386,10 +386,11 @@
 - **競標查詢**: `GET /api/Product/GetBidLog?id={uuid}`
 - **圖片上傳**: `POST /BidMgr/api/Product/UploadFile`
 - **商品新增**: `POST /BidMgr/api/Product/AddProduct`
-- **商品刪除**: `POST /BidMgr/api/Product/DeleteProduct` 🆕
+- **商品修改**: `POST /BidMgr/api/Product/UpdateProduct` 🆕
+- **商品刪除**: `POST /BidMgr/api/Product/DeleteProduct`
 - **遠端檔案**: `GET https://580.blias.com/daobo/files.php?format=json`
-- **聯絡人同步**: `GET https://580.blias.com/daobo/contacts.php?action=get_contacts&apiKey={key}` 🆕
-- **聯絡人更新**: `POST https://580.blias.com/daobo/contacts.php` (action=update_contact) 🆕
+- **聯絡人同步**: `GET https://580.blias.com/daobo/contacts.php?action=get_contacts&apiKey={key}`
+- **聯絡人更新**: `POST https://580.blias.com/daobo/contacts.php` (action=update_contact)
 
 ### 已知限制
 1. 依賴網站使用 Vue.js 框架和特定 DOM 結構
@@ -418,7 +419,18 @@
 
 ## 🔄 版本更新
 
-### v4.3.0 (Current - February 2026) 📇
+### v4.3.1 (Current - April 2026) 🔁
+**長期未結標管理與截標日刷新**：
+- ✅ **長期未結標篩選**：資料面板新增篩選模式，顯示競標期 ≥20 天的物件
+- ✅ **雙區塊分類**：「競標中（距截標 >7天）」與「無人競標」兩區塊分開顯示
+- ✅ **批次刷新截標日**：一鍵將已選物件截標日更新為今天 +7 天，確認後執行
+- ✅ **UpdateProduct API 整合**：`utils/api.js` 新增 `updateProductEndDate()` 函式
+
+**技術細節**：
+- 修改文件：`utils/api.js`, `ui/components/dataPanel.js`
+- 新增 API：`POST /BidMgr/api/Product/UpdateProduct`
+
+### v4.3.0 (February 2026) 📇
 **聯絡人資料同步整合**：
 - ✅ **聯絡人同步模組**：新增 `utils/sheetSync.js`，從 PHP API 同步得標者聯絡資料
 - ✅ **自動同步機制**：開啟資料面板時自動同步，支援手動重新同步
